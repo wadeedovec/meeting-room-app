@@ -1,0 +1,126 @@
+:root {
+    --bs-primary: #003366;
+    --bs-primary-rgb: 0, 51, 102 !important;
+}
+
+.btn-primary {
+    background-color: var(--bs-primary);
+    border-color: var(--bs-primary);
+}
+
+.btn-primary:hover {
+    background-color: #002855;
+    border-color: #002855;
+}
+
+.calendar-wrapper {
+    background-color: #f8f9fa!important;
+    padding: 20px!important;
+    border-radius: 15px!important;
+}
+
+.fc-toolbar {
+    background-color: #c4d0df!important;
+    color: white!important;
+    padding: 10px 20px!important;
+    border-radius: 10px!important;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.fc-toolbar button {
+    border-radius: 50px!important;
+    background-color: #2883ad!important;
+    border: none!important;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1)!important;
+}
+
+.fc-toolbar button:hover {
+    background-color: #2883ad!important;
+}
+
+.fc-toolbar-title {
+    font-size: 1.5rem!important;
+    font-weight: bold!important;
+}
+
+.fc-daygrid-day-number {
+    font-weight: bold!important;
+}
+
+.fc-daygrid-day-today {
+    background-color: #e9ecef!important;
+    border-radius: 50%!important;
+}
+
+.custom-event {
+    background-color: #2883ad!important;
+    color: white !important;
+    border-radius: 5px!important;
+    padding: 5px 10px!important;
+    font-size: 0.85rem!important;
+}
+
+.custom-event:hover {
+    background-color: #2883ad!important;
+}
+
+.custom-day-header {
+    background-color: #f1f1f1!important;
+    font-weight: bold!important;
+}
+
+/* Table Styles */
+.table {
+    background-color: #ffffff!important;
+    border-radius: 10px!important;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1)!important;
+    overflow: hidden!important;
+}
+
+.table th,
+.table td {
+    text-align: center!important;
+    vertical-align: middle!important;
+    font-size: 1rem!important;
+    color: #333333!important;
+    padding: 15px!important;
+}
+
+.table th {
+    background-color: var(--bs-primary)!important;
+    color: white!important;
+    font-weight: bold!important;
+    text-transform: uppercase!important;
+    letter-spacing: 1px!important;
+}
+
+.table tbody tr {
+    background-color: #f9f9f9!important;
+    border-bottom: 1px solid #ddd!important;
+}
+
+.table tbody tr:hover {
+    background-color: #e6f7ff!important;
+    cursor: pointer!important;
+}
+
+.table tbody tr:nth-child(odd) {
+    background-color: #f2f2f2!important;
+}
+
+.table tbody tr:nth-child(even) {
+    background-color: #ffffff!important;
+}
+
+.table .btn {
+    border-radius: 50px!important;
+    background-color: #2883ad!important;
+    color: white!important;
+    border: none!important;
+    font-size: 0.9rem!important;
+}
+
+.table .btn:hover {
+    background-color: #005f77!important;
+    color: white!important;
+}
