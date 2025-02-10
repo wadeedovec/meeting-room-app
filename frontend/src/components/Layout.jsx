@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useUser } from "../../context/UserContext";
 import { useParams } from "react-router-dom";
-import Topbar from "../components/Topbar";
+import Topbar from "../components/TopBar.jsx";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
