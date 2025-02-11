@@ -10,7 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@azure/msal-browser": "^4.0.1",
+    "@azure/msal-browser": "^4.2.0",
     "@azure/msal-react": "^3.0.2",
     "@fullcalendar/core": "^6.1.15",
     "@fullcalendar/daygrid": "^6.1.15",
