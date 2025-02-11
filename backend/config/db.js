@@ -1,14 +1,7 @@
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
 
-// Get the current directory path using import.meta.url
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-// Load environment variables from the root .env file
-dotenv.config({ path: `${__dirname}/../../.env` });
+dotenv.config();
 
 export const connectDB = async () => {
     const MONGO_URI = process.env.MONGO_URI;

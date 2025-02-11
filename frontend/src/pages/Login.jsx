@@ -21,14 +21,14 @@ const Login = () => {
                 role: "user",
                 roomAccess: null,
             };
-            const checkUserResponse = await fetch("http://localhost:5000/api/users/check-user", {
+            const checkUserResponse = await fetch(`${import.meta.env.VITE_API_URI}users/check-user`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ email: account.username }),
             });
             const checkUserData = await checkUserResponse.json();
             if (!checkUserData.userExists || checkUserData.userExists == false) {
-                const addUserResponse = await fetch("http://localhost:5000/api/users/add-user", {
+                const addUserResponse = await fetch(`${import.meta.env.VITE_API_URI}api/users/add-user`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(userData),

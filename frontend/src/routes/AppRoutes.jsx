@@ -1,9 +1,7 @@
 import React from "react";
 import { Route, BrowserRouter as Router, Routes } from "react-router-dom";
 import CalendarPage from "../pages/CalendarPage";
-import NewReservation from "../pages/NewReservation";
-import Reservations from "../pages/Reservations";
-import DashboardPage from "../pages/DashboardPage";
+
 import Login from "../pages/Login";
 import ProtectedRoutes from "./ProtectedRoutes";
 import Layout from "../components/Layout";

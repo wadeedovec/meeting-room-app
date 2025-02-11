@@ -10,13 +10,15 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 app.use(express.json());
 app.use(cors());
-
+app.get('/api/', (req, res) => {
+    res.send('API is running...');
+});
 app.use("/api/rooms", roomRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/reservations", reservationRoutes);
 
 app.listen(PORT, () => {
     connectDB();
-    console.log("http://localhost:" + PORT);
+    console.log("Server is running");
 
 });

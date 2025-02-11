@@ -76,7 +76,7 @@ const CalendarPage = () => {
                 organizer: formData.organizer,
                 meetingRoomId: roomId,
             };
-            const dbResponse = await fetch("http://localhost:5000/api/reservations", {
+            const dbResponse = await fetch(`${import.meta.env.VITE_API_URI}reservations`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -144,7 +144,7 @@ const CalendarPage = () => {
                 organizer: user._id,
                 meetingRoomId: selectedRoom,
             };
-            const dbResponse = await fetch("http://localhost:5000/api/reservations", {
+            const dbResponse = await fetch(`${import.meta.env.VITE_API_URI}reservations`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -172,7 +172,7 @@ const CalendarPage = () => {
     };
     const fetchCalendars = async (roomId) => {
         try {
-            const response = await fetch(`http://localhost:5000/api/reservations/room/${roomId}`);
+            const response = await fetch(`${import.meta.env.VITE_API_URI}reservations/room/${roomId}`);
             if (!response.ok) {
                 window.location.replace('/');
             }
@@ -193,7 +193,7 @@ const CalendarPage = () => {
     };
     const fetchMeetingRoom = async () => {
         try {
-            const response = await fetch(`http://localhost:5000/api/rooms/${roomId}`);
+            const response = await fetch(`${import.meta.env.VITE_API_URI}rooms/${roomId}`);
             if (!response.ok) {
                 window.location.replace('/login');
             }
@@ -233,7 +233,7 @@ const CalendarPage = () => {
     };
     const fetchUserAccessed = async () => {
         try {
-            const response = await fetch(`http://localhost:5000/api/users/room/${roomId}`);
+            const response = await fetch(`${import.meta.env.VITE_API_URI}users/room/${roomId}`);
             if (!response.ok) {
                 throw new Error('no user');
             }

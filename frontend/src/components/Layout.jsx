@@ -12,7 +12,7 @@ const Layout = ({ children }) => {
 
     const fetchMeetingRoom = async () => {
         try {
-            const response = await fetch(`http://localhost:5000/api/rooms/${roomId}`);
+            const response = await fetch(`${import.meta.env.VITE_API_URI}rooms/${roomId}`);
             if (!response.ok) {
                 window.location.replace('/login');
             }
