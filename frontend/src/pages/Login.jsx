@@ -28,7 +28,7 @@ const Login = () => {
             });
             const checkUserData = await checkUserResponse.json();
             if (!checkUserData.userExists || checkUserData.userExists == false) {
-                const addUserResponse = await fetch(`${import.meta.env.VITE_API_URI}api/users/add-user`, {
+                const addUserResponse = await fetch(`${import.meta.env.VITE_API_URI}/users/add-user`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(userData),
