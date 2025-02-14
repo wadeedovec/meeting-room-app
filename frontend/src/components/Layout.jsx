@@ -42,7 +42,7 @@ const Layout = ({ children }) => {
                                 ? "Loading..."
                                 : user
                                     ? `Hello ${user.name}, 👋`
-                                    : `Welcome to ${room.name || "Guest"}'s Room`}
+                                    : `Welcome to ${room.name || "Guest"} 🏠`}
                         </h5>
                     </div>
                 </div>

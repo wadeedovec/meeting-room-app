@@ -4,12 +4,16 @@ const roomSchema = new mongoose.Schema(
     {
         name: {
             type: String,
-            required: true, // Make this field required
+            required: true,
         },
         capacity: {
             type: Number,
-            required: true, // Make this field required
+            required: true,
         },
+        room_color: {
+            type: String,
+            required: false,
+        }
     },
     {
         timestamps: true, // Automatically add createdAt and updatedAt timestamps

@@ -18,8 +18,7 @@ const Login = () => {
                 name: account.name,
                 email: account.username,
                 aad_id: account.localAccountId,
-                role: "user",
-                roomAccess: null,
+                role: "user"
             };
             const checkUserResponse = await fetch(`${import.meta.env.VITE_API_URI}users/check-user`, {
                 method: "POST",

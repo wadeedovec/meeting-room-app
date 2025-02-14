@@ -19,28 +19,23 @@ const CalendarPage = () => {
     const [events, setEvents] = useState([]);
     const { user } = useUser();
     const [users, setUsers] = useState([]);
+    const [rooms, setRooms] = useState("");
     const [selectedRoom, setSelectedRoom] = useState("");
     const [formData, setFormData] = useState({
         organizer: "",
         subject: "",
-        description: "",
         startTime: "",
         endTime: "",
     });
     const [errors, setErrors] = useState({});
     const handleChange = (e) => {
-        const { name, value } = e.target;
-        setFormData((prevState) => ({
-            ...prevState,
-            [name]: value,
-        }));
+        setFormData({ ...formData, [e.target.name]: e.target.value });
+        setErrors((prev) => ({ ...prev, [e.target.name]: "" }));
     };
     const validateForm = () => {
         const newErrors = {};
-        if (roomId) {
-            if (!formData.organizer) {
-                newErrors.organizer = "Organizer is required.";
-            }
+        if (roomId && !formData.organizer) {
+            newErrors.organizer = "Organizer is required.";
         }
         if (!formData.subject.trim()) {
             newErrors.subject = "Meeting subject is required.";
@@ -61,87 +56,100 @@ const CalendarPage = () => {
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
-    const handleSubmitTablet = async (e) => {
-        e.preventDefault();
-        if (!validateForm()) {
-            toast.error("Please fill out the form correctly.");
-            return;
-        }
-        console.log(formData.organizer);
-        try {
-            const dbPayload = {
-                subject: formData.subject,
-                start: formData.startTime,
-                end: formData.endTime,
-                organizer: formData.organizer,
-                meetingRoomId: roomId,
-            };
-            const dbResponse = await fetch(`${import.meta.env.VITE_API_URI}reservations`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify(dbPayload),
-            });
-            if (dbResponse.ok) {
-                setFormData({
-                    organizer: "",
-                    subject: "",
-                    description: "",
-                    startTime: "",
-                    endTime: "",
-                    meetingRoomId: null,
-                });
-                toast.success("Reservation created successfully!");
-                fetchCalendars(selectedRoom);
-                const modal = bootstrap.Modal.getInstance(document.getElementById("reservationModal"));
-                modal.hide();
-            } else {
-                T
-                toast.error("Failed to save reservation in database.");
-            }
-        } catch (error) {
-            toast.error("Failed to create reservation.");
-        }
-    };
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!validateForm()) {
-            toast.error("Please fill out the form correctly.");
+        if (!validateForm() || isSubmitting) {
+            // Check the specific validation errors and provide specific feedback
+            if (errors.organizer) {
+                toast.error(errors.organizer);
+            } else if (errors.subject) {
+                toast.error(errors.subject);
+            } else if (errors.startTime) {
+                toast.error(errors.startTime);
+            } else if (errors.endTime) {
+                toast.error(errors.endTime);
+            } else if (errors.time) {
+                toast.error(errors.time);
+            }
             return;
         }
-        const graphPayload = {
-            subject: formData.subject,
-            body: {
-                contentType: "HTML",
-                content: formData.description,
-            },
-            start: {
-                dateTime: formData.startTime,
-                timeZone: "Asia/Jerusalem",
-            },
-            end: {
-                dateTime: formData.endTime,
-                timeZone: "Asia/Jerusalem",
-            },
-            location: {
-                displayName: getRoomName(selectedRoom) || 'Unknown', // Use dynamic meeting room name
-            },
-            organizer: {
-                emailAddress: {
-                    address: user.email,
-                    name: user.name,
-                },
-            },
-        };
+        if (!selectedRoom) {
+            toast.error("Please select a meeting room.");
+            return;
+        }
+        setIsSubmitting(true);
+        const newStart = new Date(formData.startTime);
+        const newEnd = new Date(formData.endTime);
+        const now = new Date();
+        // Check if the start time is in the past
+        if (newStart < now) {
+            toast.error("You cannot make a reservation in the past.");
+            setIsSubmitting(false);
+            return;
+        }
+        // Check if the end time is before the start time
+        if (newEnd <= newStart) {
+            toast.error("End time must be after start time.");
+            setIsSubmitting(false);
+            return;
+        }
+        // Fetch existing reservations for the selected room
         try {
-            const graphClient = createGraphClient(account);
-            await graphClient.api("https://graph.microsoft.com/v1.0/me/events").post(graphPayload);
+            const reservationsResponse = await fetch(
+                `${import.meta.env.VITE_API_URI}reservations/room/${selectedRoom}`
+            );
+            if (!reservationsResponse.ok) {
+                toast.error("Failed to fetch existing reservations.");
+                return;
+            }
+            const response = await reservationsResponse.json();
+            const existingReservations = response.data;  // Accessing the reservations from the 'data' field
+            if (!Array.isArray(existingReservations)) {
+                toast.error("Invalid response format for reservations.");
+                return;
+            }
+            // Check for conflicts with existing reservations
+            const hasConflict = existingReservations.some(reservation => {
+                const existingStart = new Date(reservation.start);
+                const existingEnd = new Date(reservation.end);
+                // Check if the new reservation overlaps with any existing ones
+                return (newStart < existingEnd && newEnd > existingStart);
+            });
+            if (hasConflict) {
+                toast.error("This time slot is already taken. Please select a different time.");
+                return;
+            }
+            if (user) {
+                const selectedRoomObject = rooms.find((room) => room._id === selectedRoom);
+                const graphPayload = {
+                    subject: formData.subject,
+                    start: {
+                        dateTime: formData.startTime,
+                        timeZone: "Asia/Jerusalem",
+                    },
+                    end: {
+                        dateTime: formData.endTime,
+                        timeZone: "Asia/Jerusalem",
+                    },
+                    location: {
+                        displayName: selectedRoomObject ? selectedRoomObject.name : "Unknown",
+                    },
+                    organizer: {
+                        emailAddress: {
+                            address: user.email,
+                            name: user.name,
+                        },
+                    },
+                };
+                const graphClient = createGraphClient(account);
+                await graphClient.api("https://graph.microsoft.com/v1.0/me/events").post(graphPayload);
+            }
             const dbPayload = {
                 subject: formData.subject,
                 start: formData.startTime,
                 end: formData.endTime,
-                organizer: user._id,
+                organizer: user ? user._id : formData.organizer,
                 meetingRoomId: selectedRoom,
             };
             const dbResponse = await fetch(`${import.meta.env.VITE_API_URI}reservations`, {
@@ -154,7 +162,6 @@ const CalendarPage = () => {
             if (dbResponse.ok) {
                 setFormData({
                     subject: "",
-                    description: "",
                     startTime: "",
                     endTime: "",
                     meetingRoomId: null,
@@ -166,50 +173,78 @@ const CalendarPage = () => {
             } else {
                 toast.error("Failed to save reservation in database.");
             }
-        } catch (error) {
+        } catch (e) {
+            console.error("Error:", e);
             toast.error("Failed to create reservation.");
+        } finally {
+            setIsSubmitting(false);
         }
     };
     const fetchCalendars = async (roomId) => {
         try {
             const response = await fetch(`${import.meta.env.VITE_API_URI}reservations/room/${roomId}`);
             if (!response.ok) {
-                window.location.replace('/');
+                throw new Error("Room reservations");
             }
             const data = await response.json();
             const calendarEvents = data.data.map((event) => ({
-                title: event.subject || "No Subject",
                 start: event.start,
                 end: event.end,
                 extendedProps: {
+                    subject: event.subject || "No Subject",
                     organizer: event.organizer?.name || "Unknown",
                     location: event.meetingRoomId?.name || "Unknown",
                 },
             }));
             setEvents(calendarEvents);
+            console.log("room id", roomId);
         } catch (error) {
-            console.error("Error fetching data:");
+            console.error("Error fetching data:", error);
         }
     };
-    const fetchMeetingRoom = async () => {
+    const fetchUsers = async () => {
+        const controller = new AbortController();
         try {
-            const response = await fetch(`${import.meta.env.VITE_API_URI}rooms/${roomId}`);
+            const response = await fetch(`${import.meta.env.VITE_API_URI}users/`, {
+                signal: controller.signal,
+            });
             if (!response.ok) {
-                window.location.replace('/login');
+                throw new Error("Failed to fetch users");
             }
-            const data = await response.json();
+            const result = await response.json();
+            if (result.success) {
+                setUsers(result.data); // ✅ Extract 'data' array
+            } else {
+                console.error("Error: API returned success=false");
+            }
         } catch (error) {
-            console.error("Error fetching Room");
+            if (error.name !== "AbortError") {
+                console.error("Error fetching rooms:", error);
+            }
         }
-    }
-    const getRoomName = (roomId) => {
-        const room = user.roomAccess.find((room) => room._id === roomId);
-        return room ? room.name : "Unknown Room";
+        return () => controller.abort();
     };
-    const handleRoomChange = (e) => {
-        const roomId = e.target.value;
-        setSelectedRoom(roomId);
-        fetchCalendars(roomId);
+    const fetchRooms = async () => {
+        const controller = new AbortController();
+        try {
+            const response = await fetch(`${import.meta.env.VITE_API_URI}rooms/`, {
+                signal: controller.signal,
+            });
+            if (!response.ok) {
+                throw new Error("Failed to fetch rooms");
+            }
+            const result = await response.json();
+            if (result.success) {
+                setRooms(result.data); // ✅ Extract 'data' array
+            } else {
+                console.error("Error: API returned success=false");
+            }
+        } catch (error) {
+            if (error.name !== "AbortError") {
+                console.error("Error fetching rooms:", error);
+            }
+        }
+        return () => controller.abort();
     };
     const createGraphClient = (account) => {
         const authProviderOptions = {
@@ -231,40 +266,48 @@ const CalendarPage = () => {
         );
         return Client.initWithMiddleware({ authProvider });
     };
-    const fetchUserAccessed = async () => {
-        try {
-            const response = await fetch(`${import.meta.env.VITE_API_URI}users/room/${roomId}`);
-            if (!response.ok) {
-                throw new Error('no user');
-            }
-            const data = await response.json();
-            setUsers(data.data);
-        } catch (error) {
-            console.error("Error fetching Room", error);
-        }
-    }
+    const handleRoomChange = (e) => {
+        const roomId = e.target.value;
+        setSelectedRoom(roomId);
+        fetchCalendars(roomId);
+    };
     useEffect(() => {
-        if (user) {
-            if (user?.roomAccess?.length > 0) {
-                const defaultRoom = user.roomAccess[0]._id;
-                setSelectedRoom(defaultRoom);
-                fetchCalendars(defaultRoom);
-            }
-            if (roomId) {
-                window.location.replace('/');
-            }
+        if (!user) {
+            fetchUsers();
         } else {
-            fetchUserAccessed();
-            fetchMeetingRoom();
+            fetchRooms();
+        }
+    }, []);
+    useEffect(() => {
+        if (!user) {
             setSelectedRoom(roomId);
             fetchCalendars(roomId);
+        } else {
+            if (rooms.length > 0) {
+                const defaultRoom = rooms[0];
+                setSelectedRoom(defaultRoom._id);
+                fetchCalendars(defaultRoom._id);
+            }
         }
-    }, [user?.roomAccess]);
-    if (user && user?.roomAccess?.length > 0 && !roomId) {
-        return (
-            <div>
-                {/* Room Selection and Reservation Button */}
-                <div className="row mb-4">
+    }, [rooms]);
+    const getColorCircle = (color) => {
+        const colorMap = {
+            "#FF5733": "🟥", // Red
+            "#33FF57": "🟩", // Green
+            "#3357FF": "🟦", // Blue
+            "#F1C40F": "🟨", // Yellow
+            "#9B59B6": "🟪", // Purple
+            "#E67E22": "🟧", // Orange
+            "#000000": "⬛", // Black
+            "#FFFFFF": "⬜"  // White
+        };
+        return colorMap[color] || ""; // Default to a black circle
+    };
+    return (
+        <div>
+            {/* Room Selection and Reservation Button */}
+            <div className="row mb-4">
+                {user && (
                     <div className="col-12 col-md-6 d-flex justify-content-center justify-content-md-start mb-3 mb-md-0">
                         <select
                             className="form-select form-select-md shadow-sm rounded-pill w-auto"
@@ -272,159 +315,115 @@ const CalendarPage = () => {
                             value={selectedRoom}
                             onChange={handleRoomChange}
                         >
-                            {user.roomAccess.map((room) => (
-                                <option key={room._id} value={room._id}>{room.name}</option>
-                            ))}
+                            {rooms.length > 0 ? (
+                                rooms.map((room) => (
+                                    <option key={room._id} value={room._id}>
+                                        {room.name} ({room.capacity}) {getColorCircle(room.room_color)}
+                                    </option>
+                                ))
+                            ) : (
+                                <option disabled>Loading rooms...</option>
+                            )}
                         </select>
                     </div>
-                    <div className="col-12 col-md-6 text-md-end">
-                        <button
-                            className="btn btn-lg btn-success shadow-sm rounded-pill px-4 py-2"
-                            data-bs-toggle="modal"
-                            data-bs-target="#reservationModal"
-                        >
-                            <RiAddLine /> <span className="ms-2">New Reservation</span>
-                        </button>
-                    </div>
+                )}
+                <div className={user ? "col-12 col-md-6 text-md-end" : "col-12 col-md-12 text-md-end"}>
+                    <button
+                        className="btn btn-lg btn-success shadow-sm rounded-pill px-4 py-2"
+                        data-bs-toggle="modal"
+                        data-bs-target="#reservationModal"
+                    >
+                        <RiAddLine /> <span className="ms-2">New Reservation</span>
+                    </button>
                 </div>
-                {/* Calendar Section */}
-                <div className="mt-4">
-                    <div className="card shadow-lg border-0 rounded-3">
-                        <div className="card-body p-3">
-                            <FullCalendar
-                                plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
-                                initialView="timeGridWeek"
-                                headerToolbar={{
-                                    left: "prev,next today",
-                                    center: "title",
-                                    right: "dayGridMonth,timeGridWeek",
-                                }}
-                                events={events}
-                                nowIndicator={true}
-                                allDaySlot={false}
-                                height="70vh"
-                            />
-                        </div>
-                    </div>
-                </div>
-                {/* Modal */}
-                <div className="modal fade" id="reservationModal" tabIndex="-1" aria-labelledby="reservationModalLabel" aria-hidden="true" >
-                    <div className="modal-dialog modal-dialog-centered modal-dialog-scrollable">
-                        <div className="modal-content">
-                            <form onSubmit={handleSubmit}>
-                                <div className="modal-header">
-                                    <h5 className="modal-title" id="reservationModalLabel">New Reservation</h5>
-                                    <button type="button" className="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                </div>
-                                <div className="modal-body">
-                                    <div className="row g-3">
-                                        {/* Meeting Subject */}
-                                        <div className="col-12">
-                                            <label className="form-label">Meeting Subject <span className="text-danger">*</span></label>
-                                            <input
-                                                type="text"
-                                                className={`form-control ${errors.subject ? "is-invalid" : ""}`}
-                                                placeholder="Enter meeting subject"
-                                                name="subject"
-                                                value={formData.subject}
-                                                onChange={handleChange}
-                                            />
-                                            {errors.subject && <div className="invalid-feedback">{errors.subject}</div>}
+            </div>
+            {/* Calendar Section */}
+            <div className="mt-4">
+                <div className="card shadow-lg border-0 rounded-3">
+                    <div className="card-body p-3">
+                        <FullCalendar
+                            plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
+                            initialView="timeGridWeek"
+                            headerToolbar={{
+                                left: "prev,next today",
+                                center: "title",
+                                right: "dayGridMonth,timeGridWeek",
+                            }}
+                            events={events}
+                            eventContent={(arg) => {
+                                const { extendedProps, start, end } = arg.event;
+                                const startTime = new Date(start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                                const endTime = new Date(end).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                                return (
+                                    <div
+                                        style={{
+                                            padding: '5px',
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            maxWidth: '150px',
+                                        }}
+                                    >
+                                        <em>{extendedProps.organizer}</em>
+                                        {/* Time range with smaller text */}
+                                        <div
+                                            style={{
+                                                fontSize: '12px',
+                                                color: '#fff',
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis',
+                                                whiteSpace: 'nowrap', /* Prevent wrapping */
+                                                maxWidth: '100%',
+                                            }}
+                                        >
+                                            <span>{startTime} - {endTime}</span>
                                         </div>
-                                        {/* Meeting Description */}
-                                        <div className="col-12">
-                                            <label className="form-label">Meeting Description</label>
-                                            <textarea
-                                                className="form-control"
-                                                placeholder="Enter meeting description"
-                                                name="description"
-                                                value={formData.description}
-                                                onChange={handleChange}
-                                            ></textarea>
-                                        </div>
-                                        {/* Start Time */}
-                                        <div className="col-md-6">
-                                            <label className="form-label">Start Time <span className="text-danger">*</span></label>
-                                            <input
-                                                type="datetime-local"
-                                                className={`form-control ${errors.startTime ? "is-invalid" : ""}`}
-                                                name="startTime"
-                                                value={formData.startTime}
-                                                onChange={handleChange}
-                                            />
-                                            {errors.startTime && <div className="invalid-feedback">{errors.startTime}</div>}
-                                        </div>
-                                        {/* End Time */}
-                                        <div className="col-md-6">
-                                            <label className="form-label">End Time <span className="text-danger">*</span></label>
-                                            <input
-                                                type="datetime-local"
-                                                className={`form-control ${errors.endTime ? "is-invalid" : ""}`}
-                                                name="endTime"
-                                                value={formData.endTime}
-                                                onChange={handleChange}
-                                            />
-                                            {errors.endTime && <div className="invalid-feedback">{errors.endTime}</div>}
-                                            {errors.time && <div className="invalid-feedback">{errors.time}</div>}
+                                        {/* Organizer info with smaller font */}
+                                        <div
+                                            style={{
+                                                fontSize: '10px',
+                                                color: '#fff',
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis',
+                                                whiteSpace: 'nowrap',
+                                                maxWidth: '100%',
+                                            }}
+                                        >
+                                            {/* Subject with truncation */}
+                                            <h6
+                                                style={{
+                                                    fontSize: '10px',
+                                                    margin: '0',
+                                                    overflow: 'hidden',
+                                                    whiteSpace: 'nowrap', /* Prevent wrapping */
+                                                    textOverflow: 'ellipsis', /* Truncate text */
+                                                    maxWidth: '80px', /* Ensure it doesn't overflow container */
+                                                }}
+                                            >
+                                                {extendedProps.subject}
+                                            </h6>
                                         </div>
                                     </div>
-                                </div>
-                                <div className="modal-footer">
-                                    <button type="button" className="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                                    <button type="submit" className="btn btn-primary">Save Reservation</button>
-                                </div>
-                            </form>
-                        </div>
+                                );
+                            }}
+                            nowIndicator={true}
+                            allDaySlot={false}
+                            height="70vh"
+                        />
                     </div>
                 </div>
             </div>
-        );
-    } if (roomId && !user) {
-        return (
-            <div>
-                <div className="row mb-4">
-                    <div className="col-12 col-md-12 text-md-end">
-                        <button
-                            className="btn btn-lg btn-success shadow-sm rounded-pill px-4 py-2"
-                            data-bs-toggle="modal"
-                            data-bs-target="#reservationModal"
-                        >
-                            <RiAddLine /> <span className="ms-2">New Reservation</span>
-                        </button>
-                    </div>
-                </div>
-                {/* Calendar Section */}
-                <div className="mt-4">
-                    <div className="card shadow-lg border-0 rounded-3">
-                        <div className="card-body p-3">
-                            <FullCalendar
-                                plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
-                                initialView="timeGridWeek"
-                                headerToolbar={{
-                                    left: "prev,next today",
-                                    center: "title",
-                                    right: "dayGridMonth,timeGridWeek",
-                                }}
-                                events={events}
-                                nowIndicator={true}
-                                allDaySlot={false}
-                                height="70vh"
-                            />
-                        </div>
-                    </div>
-                </div>
-                {/* Modal */}
-                <div className="modal fade" id="reservationModal" tabIndex="-1" aria-labelledby="reservationModalLabel" aria-hidden="true" >
-                    <div className="modal-dialog modal-dialog-centered modal-dialog-scrollable">
-                        <div className="modal-content">
-                            <form onSubmit={handleSubmitTablet}>
-                                <div className="modal-header">
-                                    <h5 className="modal-title" id="reservationModalLabel">New Reservation</h5>
-                                    <button type="button" className="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                </div>
-                                <div className="modal-body">
-                                    <div className="row g-3">
-                                        {/* Organizer Selection (Searchable) */}
+            {/* Modal */}
+            <div className="modal fade" id="reservationModal" tabIndex="-1" aria-labelledby="reservationModalLabel" aria-hidden="true" >
+                <div className="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+                    <div className="modal-content">
+                        <form onSubmit={handleSubmit}>
+                            <div className="modal-header">
+                                <h5 className="modal-title" id="reservationModalLabel">New Reservation</h5>
+                                <button type="button" className="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div className="modal-body">
+                                <div className="row g-3">
+                                    {!user && (
                                         <div className="col-12">
                                             <label className="form-label">Organizer <span className="text-danger">*</span></label>
                                             <select
@@ -442,78 +441,58 @@ const CalendarPage = () => {
                                             </select>
                                             {errors.organizer && <div className="invalid-feedback">{errors.organizer}</div>}
                                         </div>
-                                        {/* Meeting Subject */}
-                                        <div className="col-12">
-                                            <label className="form-label">Meeting Subject <span className="text-danger">*</span></label>
-                                            <input
-                                                type="text"
-                                                className={`form-control ${errors.subject ? "is-invalid" : ""}`}
-                                                placeholder="Enter meeting subject"
-                                                name="subject"
-                                                value={formData.subject}
-                                                onChange={handleChange}
-                                            />
-                                            {errors.subject && <div className="invalid-feedback">{errors.subject}</div>}
-                                        </div>
-                                        {/* Meeting Description */}
-                                        <div className="col-12">
-                                            <label className="form-label">Meeting Description</label>
-                                            <textarea
-                                                className="form-control"
-                                                placeholder="Enter meeting description"
-                                                name="description"
-                                                value={formData.description}
-                                                onChange={handleChange}
-                                            ></textarea>
-                                        </div>
-                                        {/* Start Time */}
-                                        <div className="col-md-6">
-                                            <label className="form-label">Start Time <span className="text-danger">*</span></label>
-                                            <input
-                                                type="datetime-local"
-                                                className={`form-control ${errors.startTime ? "is-invalid" : ""}`}
-                                                name="startTime"
-                                                value={formData.startTime}
-                                                onChange={handleChange}
-                                            />
-                                            {errors.startTime && <div className="invalid-feedback">{errors.startTime}</div>}
-                                        </div>
-                                        {/* End Time */}
-                                        <div className="col-md-6">
-                                            <label className="form-label">End Time <span className="text-danger">*</span></label>
-                                            <input
-                                                type="datetime-local"
-                                                className={`form-control ${errors.endTime ? "is-invalid" : ""}`}
-                                                name="endTime"
-                                                value={formData.endTime}
-                                                onChange={handleChange}
-                                            />
-                                            {errors.endTime && <div className="invalid-feedback">{errors.endTime}</div>}
-                                            {errors.time && <div className="invalid-feedback">{errors.time}</div>}
-                                        </div>
+                                    )}
+                                    {/* Meeting Subject */}
+                                    <div className="col-12">
+                                        <label className="form-label">Meeting Subject <span className="text-danger">*</span></label>
+                                        <input
+                                            type="text"
+                                            className={`form-control ${errors.subject ? "is-invalid" : ""}`}
+                                            placeholder="Enter meeting subject"
+                                            name="subject"
+                                            value={formData.subject}
+                                            onChange={handleChange}
+                                        />
+                                        {errors.subject && <div className="invalid-feedback">{errors.subject}</div>}
+                                    </div>
+                                    {/* Start Time */}
+                                    <div className="col-md-6">
+                                        <label className="form-label">Start Time <span className="text-danger">*</span></label>
+                                        <input
+                                            type="datetime-local"
+                                            className={`form-control ${errors.startTime ? "is-invalid" : ""}`}
+                                            name="startTime"
+                                            value={formData.startTime}
+                                            onChange={handleChange}
+                                        />
+                                        {errors.startTime && <div className="invalid-feedback">{errors.startTime}</div>}
+                                    </div>
+                                    {/* End Time */}
+                                    <div className="col-md-6">
+                                        <label className="form-label">End Time <span className="text-danger">*</span></label>
+                                        <input
+                                            type="datetime-local"
+                                            className={`form-control ${errors.endTime ? "is-invalid" : ""}`}
+                                            name="endTime"
+                                            value={formData.endTime}
+                                            onChange={handleChange}
+                                        />
+                                        {errors.endTime && <div className="invalid-feedback">{errors.endTime}</div>}
+                                        {errors.time && <div className="invalid-feedback">{errors.time}</div>}
                                     </div>
                                 </div>
-                                <div className="modal-footer">
-                                    <button type="button" className="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                                    <button type="submit" className="btn btn-primary">Save Reservation</button>
-                                </div>
-                            </form>
-                        </div>
+                            </div>
+                            <div className="modal-footer">
+                                <button type="button" className="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
+                                    {isSubmitting ? "Saving..." : "Save Reservation"}
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             </div>
-        );
-    }
-    if (user && user?.roomAccess?.length == 0) {
-        return (
-            <div className="d-flex flex-column align-items-center justify-content-center">
-                <div className="card shadow-lg p-4 text-center" style={{ maxWidth: "500px", borderRadius: "20px" }}>
-                    <div style={{ fontSize: "50px", marginBottom: "15px" }}>🔑</div>
-                    <h2 className="mb-3 fw-bold">Access Pending</h2>
-                    <p className="text-muted">An admin will grant you access to your rooms soon. Please wait for approval.</p>
-                </div>
-            </div>
-        );
-    }
+        </div>
+    );
 };
 export default CalendarPage;

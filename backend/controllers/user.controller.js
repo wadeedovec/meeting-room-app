@@ -9,31 +9,14 @@ export const getUsers = async (req, res) => {
         res.status(500).json({ success: false, message: "Server Error" });
     }
 }
-export const getUsersRoom = async (req, res) => {
-    const { roomId } = req.params;
-    if (!roomId) {
-        return res.status(400).json({ message: "roomId is required" });
-    }
-    try {
-        // Find all users who have this roomId in their roomAccess array
-        const users = await User.find({ roomAccess: roomId });
-        if (users.length > 0) {
-            return res.status(200).json({ success: true, data: users });
-        } else {
-            return res.status(404).json({ success: false, message: "No users found for this room" });
-        }
-    } catch (error) {
-        console.error("Error in fetching users:", error.message);
-        return res.status(500).json({ success: false, message: "Server Error" });
-    }
-};
+
 export const checkUser = async (req, res) => {
     const { email } = req.body; // Ensure the email is passed in the request body
     if (!email) {
         return res.status(400).json({ message: "Email is required" }); // Validate input
     }
     try {
-        const user = await User.findOne({ email }).populate('roomAccess'); // Query the database
+        const user = await User.findOne({ email }); // Query the database
         if (user) {
             return res.json({ userExists: true, user });
         } else {
@@ -45,7 +28,7 @@ export const checkUser = async (req, res) => {
     }
 }
 export const createUser = async (req, res) => {
-    const { email, name, aad_id, role, roomAccess } = req.body;
+    const { email, name, aad_id, role } = req.body;
     try {
         // Check if user already exists in MongoDB
         const existingUser = await User.findOne({ email });
@@ -57,8 +40,7 @@ export const createUser = async (req, res) => {
             aad_id,
             name,
             email,
-            role,
-            roomAccess
+            role
         });
         await newUser.save();
         res.json({ userExists: false, user: newUser });
