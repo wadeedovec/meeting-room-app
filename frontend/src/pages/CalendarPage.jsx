@@ -21,8 +21,8 @@ const CalendarPage = () => {
     const [users, setUsers] = useState([]);
     const [rooms, setRooms] = useState("");
     const [selectedRoom, setSelectedRoom] = useState("");
-    /*let accessToken = null;
-    let tokenExpiry = null;*/
+    let accessToken = null;
+    let tokenExpiry = null;
     const [formData, setFormData] = useState({
         organizer: "",
         subject: "",
@@ -59,8 +59,7 @@ const CalendarPage = () => {
         return Object.keys(newErrors).length === 0;
     };
     const [isSubmitting, setIsSubmitting] = useState(false);
-    /*const getAccessToken = async () => {
-        console.log("Fetching Access Token...");    
+    const getAccessToken = async () => {
         if (accessToken && tokenExpiry && Date.now() < tokenExpiry) {
             return accessToken;
         }
@@ -86,13 +85,12 @@ const CalendarPage = () => {
             const data = await response.json();
             accessToken = data.access_token;
             tokenExpiry = Date.now() + data.expires_in * 1000;
-            console.log("access token : ", accessToken);
             return accessToken;
         } catch (error) {
             console.error("Error getting access token:", error);
             return null;
         }
-    };*/
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -181,54 +179,7 @@ const CalendarPage = () => {
                 };
                 const graphClient = createGraphClient(account);
                 await graphClient.api("https://graph.microsoft.com/v1.0/me/events").post(graphPayload);
-            }/* else {
-                const token = await getAccessToken();
-                if (!token) return toast.error("Failed to create event NO ACCESS TOKEN");
-                const selectedRoomObject = rooms.find((room) => room._id === roomId);
-
-                const graphPayload = {
-                    subject: formData.subject,
-                    start: {
-                        dateTime: formData.startTime,
-                        timeZone: "Asia/Jerusalem",
-                    },
-                    end: {
-                        dateTime: formData.endTime,
-                        timeZone: "Asia/Jerusalem",
-                    },
-                    location: {
-                        displayName: selectedRoomObject ? selectedRoomObject.name : "Unknown",
-                    },
-                    organizer: {
-                        emailAddress: {
-                            address: user.email,
-                            name: user.name,
-                        },
-                    },
-                };
-                try {
-                    const url = `https://graph.microsoft.com/v1.0/users/${email}/calendar/events`;
-                    const response = await fetch(url, {
-                        method: "POST",
-                        headers: {
-                            "Authorization": `Bearer ${token}`,
-                            "Content-Type": "application/json",
-                        },
-                        body: JSON.stringify(graphPayload),
-                    });
-
-                    if (!response.ok) {
-                        throw new Error("Failed to create event URL IS WRONG");
-                    }
-
-                    const data = await response.json();
-                    return { success: true, event: data };
-                } catch (error) {
-                    console.error("Error creating event:", error.response?.data || error.message);
-                    toast.error("Failed to create event ERROR SENDING");
-                }
-
-            }*/
+            }
             const dbPayload = {
                 subject: formData.subject,
                 start: formData.startTime,
@@ -361,7 +312,6 @@ const CalendarPage = () => {
         } else {
             fetchRooms();
         }
-        //getAccessToken();
     }, []);
     useEffect(() => {
         if (!user) {
