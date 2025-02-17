@@ -61,7 +61,9 @@ export const loginRequest = {
         "Team.ReadBasic.All",
         "User.Read.All",
         "Directory.Read.All"
-    ]
+    ],
+    redirectUri: import.meta.env.VITE_REDIRECT_URI,
+
 };
 
 /**

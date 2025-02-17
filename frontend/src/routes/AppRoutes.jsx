@@ -1,6 +1,7 @@
 import React from "react";
 import { Route, BrowserRouter as Router, Routes } from "react-router-dom";
 import CalendarPage from "../pages/CalendarPage";
+import AuthRedirectHandler from "../pages/AuthRedirectHandler";
 
 import Login from "../pages/Login";
 import ProtectedRoutes from "./ProtectedRoutes";
@@ -11,6 +12,8 @@ const AppRoutes = () => {
         <Router>
             <Routes>
                 <Route path="/login" element={<Login />} />
+                <Route path="/redirect" element={<AuthRedirectHandler />} /> {/* Handle the redirect */}
+
                 <Route element={<ProtectedRoutes />}>
                     <Route
                         element={
