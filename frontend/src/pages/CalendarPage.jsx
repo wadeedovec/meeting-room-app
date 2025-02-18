@@ -21,8 +21,6 @@ const CalendarPage = () => {
     const [users, setUsers] = useState([]);
     const [rooms, setRooms] = useState("");
     const [selectedRoom, setSelectedRoom] = useState("");
-    let accessToken = null;
-    let tokenExpiry = null;
     const [formData, setFormData] = useState({
         organizer: "",
         subject: "",
@@ -59,43 +57,10 @@ const CalendarPage = () => {
         return Object.keys(newErrors).length === 0;
     };
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const getAccessToken = async () => {
-        if (accessToken && tokenExpiry && Date.now() < tokenExpiry) {
-            return accessToken;
-        }
-
-        const url = `https://login.microsoftonline.com/${import.meta.env.VITE_TENANT_ID}/oauth2/v2.0/token`;
-        const params = new URLSearchParams();
-        params.append("grant_type", "client_credentials");
-        params.append("client_id", import.meta.env.VITE_CLIENT_ID);
-        params.append("client_secret", import.meta.env.VITE_CLIENT_SECRET);
-        params.append("scope", "https://graph.microsoft.com/.default");
-
-        try {
-            const response = await fetch(url, {
-                method: "POST",
-                headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                body: params.toString(),  // Convert URLSearchParams to string
-            });
-
-            if (!response.ok) {
-                throw new Error("Failed to fetch access token");
-            }
-
-            const data = await response.json();
-            accessToken = data.access_token;
-            tokenExpiry = Date.now() + data.expires_in * 1000;
-            return accessToken;
-        } catch (error) {
-            console.error("Error getting access token:", error);
-            return null;
-        }
-    };
-
+    let accessToken = null;
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!validateForm() || isSubmitting) {
-            // Check the specific validation errors and provide specific feedback
             if (errors.organizer) {
                 toast.error(errors.organizer);
             } else if (errors.subject) {
@@ -117,19 +82,16 @@ const CalendarPage = () => {
         const newStart = new Date(formData.startTime);
         const newEnd = new Date(formData.endTime);
         const now = new Date();
-        // Check if the start time is in the past
         if (newStart < now) {
             toast.error("You cannot make a reservation in the past.");
             setIsSubmitting(false);
             return;
         }
-        // Check if the end time is before the start time
         if (newEnd <= newStart) {
             toast.error("End time must be after start time.");
             setIsSubmitting(false);
             return;
         }
-        // Fetch existing reservations for the selected room
         try {
             const reservationsResponse = await fetch(
                 `${import.meta.env.VITE_API_URI}reservations/room/${selectedRoom}`
@@ -139,16 +101,14 @@ const CalendarPage = () => {
                 return;
             }
             const response = await reservationsResponse.json();
-            const existingReservations = response.data;  // Accessing the reservations from the 'data' field
+            const existingReservations = response.data;
             if (!Array.isArray(existingReservations)) {
                 toast.error("Invalid response format for reservations.");
                 return;
             }
-            // Check for conflicts with existing reservations
             const hasConflict = existingReservations.some(reservation => {
                 const existingStart = new Date(reservation.start);
                 const existingEnd = new Date(reservation.end);
-                // Check if the new reservation overlaps with any existing ones
                 return (newStart < existingEnd && newEnd > existingStart);
             });
             if (hasConflict) {
@@ -179,6 +139,59 @@ const CalendarPage = () => {
                 };
                 const graphClient = createGraphClient(account);
                 await graphClient.api("https://graph.microsoft.com/v1.0/me/events").post(graphPayload);
+            } else {
+                console.log(formData);
+                const tokenResponse = await fetch(`${import.meta.env.VITE_API_URI}getAccessToken`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                });
+                if (!tokenResponse.ok) {
+                    throw new Error("Failed to get access token");
+                }
+                const tokenData = await tokenResponse.json();
+                accessToken = tokenData.access_token;
+                console.log("Access Token:", accessToken);
+                const selectedUser = users.find((user) => user._id === formData.organizer);
+                console.log("Selected User:", selectedUser.email);
+                const selectedRoom = rooms.find((room) => room._id === roomId);
+                const graphPayload = {
+                    subject: formData.subject,
+                    start: {
+                        dateTime: formData.startTime,
+                        timeZone: "Asia/Jerusalem",
+                    },
+                    end: {
+                        dateTime: formData.endTime,
+                        timeZone: "Asia/Jerusalem",
+                    },
+                    location: {
+                        displayName: selectedRoom ? selectedRoom.name : "Unknown",
+                    },
+                    organizer: {
+                        emailAddress: {
+                            address: selectedUser.email,
+                            name: selectedUser.name,
+                        },
+                    },
+                };
+                const headers = {
+                    "Authorization": `Bearer ${accessToken}`,
+                    "Content-Type": "application/json",
+                };
+                const response = await fetch(`https://graph.microsoft.com/v1.0/users/${selectedUser.email}/calendar/events`, {
+                    method: "POST",
+                    headers: headers,
+                    body: JSON.stringify(graphPayload),
+                });
+
+                if (response.ok) {
+                    console.log("Event created successfully");
+                } else {
+                    const error = await response.json();
+                    console.error("Error creating event:", error);
+                }
             }
             const dbPayload = {
                 subject: formData.subject,
@@ -270,7 +283,7 @@ const CalendarPage = () => {
             }
             const result = await response.json();
             if (result.success) {
-                setRooms(result.data); // ✅ Extract 'data' array
+                setRooms(result.data);
             } else {
                 console.error("Error: API returned success=false");
             }
@@ -309,9 +322,7 @@ const CalendarPage = () => {
     useEffect(() => {
         if (!user) {
             fetchUsers();
-        } else {
-            fetchRooms();
-        }
+        } fetchRooms();
     }, []);
     useEffect(() => {
         if (!user) {
@@ -327,16 +338,16 @@ const CalendarPage = () => {
     }, [rooms]);
     const getColorCircle = (color) => {
         const colorMap = {
-            "#FF5733": "🟥", // Red
-            "#33FF57": "🟩", // Green
-            "#3357FF": "🟦", // Blue
-            "#F1C40F": "🟨", // Yellow
-            "#9B59B6": "🟪", // Purple
-            "#E67E22": "🟧", // Orange
-            "#000000": "⬛", // Black
-            "#FFFFFF": "⬜"  // White
+            "green": "🟩",
+            "blue": "🟦",
+            "yellow": "🟨",
+            "gold": "🟡",
+            "orange": "🟧",
+            "vip": "👑",
+            "grey": "⬜"
         };
-        return colorMap[color] || ""; // Default to a black circle
+
+        return colorMap[color] || "";
     };
     return (
         <div>
