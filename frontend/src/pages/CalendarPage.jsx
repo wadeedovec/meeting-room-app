@@ -12,15 +12,34 @@ import { InteractionType } from "@azure/msal-browser";
 import { Client } from "@microsoft/microsoft-graph-client";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import Select from "react-select";
 const CalendarPage = () => {
     const { roomId } = useParams();
     const { instance, accounts } = useMsal();
     const account = accounts[0];
     const [events, setEvents] = useState([]);
     const { user } = useUser();
-    const [users, setUsers] = useState([]);
+    const [MsUsers, setMsUsers] = useState([]);
+    const { loading } = useUser();
+    const [room, setRoom] = useState("");
+    const options = MsUsers.map(user => ({
+        value: user.id,
+        label: user.displayName
+    }));
     const [rooms, setRooms] = useState("");
     const [selectedRoom, setSelectedRoom] = useState("");
+    const getColorCircle = (color) => {
+        const colorMap = {
+            "green": "🟩",
+            "blue": "🟦",
+            "yellow": "🟨",
+            "gold": "🟡",
+            "orange": "🟧",
+            "vip": "👑",
+            "grey": "⬜"
+        };
+        return colorMap[color] || "";
+    };
     const [formData, setFormData] = useState({
         organizer: "",
         subject: "",
@@ -77,6 +96,8 @@ const CalendarPage = () => {
         if (!selectedRoom) {
             toast.error("Please select a meeting room.");
             return;
+        } else {
+            console.log("selected Room is: ", selectedRoom);
         }
         setIsSubmitting(true);
         const newStart = new Date(formData.startTime);
@@ -140,7 +161,7 @@ const CalendarPage = () => {
                 const graphClient = createGraphClient(account);
                 await graphClient.api("https://graph.microsoft.com/v1.0/me/events").post(graphPayload);
             } else {
-                console.log(formData);
+                const selectedUser = MsUsers.find((user) => user.id === formData.organizer);
                 const tokenResponse = await fetch(`${import.meta.env.VITE_API_URI}getAccessToken`, {
                     method: "POST",
                     headers: {
@@ -152,10 +173,11 @@ const CalendarPage = () => {
                 }
                 const tokenData = await tokenResponse.json();
                 accessToken = tokenData.access_token;
-                console.log("Access Token:", accessToken);
-                const selectedUser = users.find((user) => user._id === formData.organizer);
-                console.log("Selected User:", selectedUser.email);
-                const selectedRoom = rooms.find((room) => room._id === roomId);
+                const selectedRoomInfo = rooms.find((room) => room._id === roomId);
+                if (!selectedUser) {
+                    toast.error("Invalid organizer selected.");
+                    return;
+                }
                 const graphPayload = {
                     subject: formData.subject,
                     start: {
@@ -167,12 +189,12 @@ const CalendarPage = () => {
                         timeZone: "Asia/Jerusalem",
                     },
                     location: {
-                        displayName: selectedRoom ? selectedRoom.name : "Unknown",
+                        displayName: selectedRoomInfo ? selectedRoomInfo.name : "Unknown",
                     },
                     organizer: {
                         emailAddress: {
-                            address: selectedUser.email,
-                            name: selectedUser.name,
+                            address: selectedUser.mail,
+                            name: selectedUser.displayName,
                         },
                     },
                 };
@@ -180,12 +202,11 @@ const CalendarPage = () => {
                     "Authorization": `Bearer ${accessToken}`,
                     "Content-Type": "application/json",
                 };
-                const response = await fetch(`https://graph.microsoft.com/v1.0/users/${selectedUser.email}/calendar/events`, {
+                const response = await fetch(`https://graph.microsoft.com/v1.0/users/${selectedUser.mail}/calendar/events`, {
                     method: "POST",
                     headers: headers,
                     body: JSON.stringify(graphPayload),
                 });
-
                 if (response.ok) {
                     console.log("Event created successfully");
                 } else {
@@ -193,11 +214,12 @@ const CalendarPage = () => {
                     console.error("Error creating event:", error);
                 }
             }
+            const selectedUser = MsUsers.find((user) => user.id === formData.organizer);
             const dbPayload = {
                 subject: formData.subject,
                 start: formData.startTime,
                 end: formData.endTime,
-                organizer: user ? user._id : formData.organizer,
+                organizer: user ? user.email : selectedUser.mail,
                 meetingRoomId: selectedRoom,
             };
             const dbResponse = await fetch(`${import.meta.env.VITE_API_URI}reservations`, {
@@ -235,42 +257,47 @@ const CalendarPage = () => {
                 throw new Error("Room reservations");
             }
             const data = await response.json();
+            if (MsUsers.length === 0) {
+                console.log("MsUsers is empty, retrying...");
+                return;
+            }
+            const getDisplayName = (user) => {
+                const msUser = MsUsers.find((u) => u.mail === user.organizer);
+                return msUser ? msUser.displayName : "Unknown";
+            };
             const calendarEvents = data.data.map((event) => ({
                 start: event.start,
                 end: event.end,
                 extendedProps: {
                     subject: event.subject || "No Subject",
-                    organizer: event.organizer?.name || "Unknown",
+                    organizer: getDisplayName(event),
                     location: event.meetingRoomId?.name || "Unknown",
                 },
             }));
             setEvents(calendarEvents);
-            console.log("room id", roomId);
         } catch (error) {
             console.error("Error fetching data:", error);
         }
     };
-    const fetchUsers = async () => {
-        const controller = new AbortController();
-        try {
-            const response = await fetch(`${import.meta.env.VITE_API_URI}users/`, {
-                signal: controller.signal,
-            });
-            if (!response.ok) {
-                throw new Error("Failed to fetch users");
-            }
-            const result = await response.json();
-            if (result.success) {
-                setUsers(result.data); // ✅ Extract 'data' array
-            } else {
-                console.error("Error: API returned success=false");
-            }
-        } catch (error) {
-            if (error.name !== "AbortError") {
-                console.error("Error fetching rooms:", error);
-            }
+    const FetchMsUsers = async () => {
+        const tokenResponse = await fetch(`${import.meta.env.VITE_API_URI}getAccessToken`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+        });
+        if (!tokenResponse.ok) {
+            throw new Error("Failed to get access token");
         }
-        return () => controller.abort();
+        const tokenData = await tokenResponse.json();
+        accessToken = tokenData.access_token;
+        const headers = { "Authorization": `Bearer ${accessToken}` };
+        const response = await fetch("https://graph.microsoft.com/v1.0/users?$top=999", { headers });
+        if (!response.ok) {
+            throw new Error("Failed to fetch users from Microsoft Graph");
+        }
+        const data = await response.json();
+        setMsUsers(data.value);
     };
     const fetchRooms = async () => {
         const controller = new AbortController();
@@ -293,6 +320,18 @@ const CalendarPage = () => {
             }
         }
         return () => controller.abort();
+    };
+    const fetchMeetingRoom = async () => {
+        try {
+            const response = await fetch(`${import.meta.env.VITE_API_URI}rooms/${roomId}`);
+            if (!response.ok) {
+                window.location.replace('/login');
+            }
+            const data = await response.json();
+            setRoom(data.data);
+        } catch (error) {
+            console.error("Error fetching Room:", error);
+        }
     };
     const createGraphClient = (account) => {
         const authProviderOptions = {
@@ -321,36 +360,43 @@ const CalendarPage = () => {
     };
     useEffect(() => {
         if (!user) {
-            fetchUsers();
-        } fetchRooms();
+            fetchMeetingRoom();
+            setSelectedRoom(roomId);
+        }
+        fetchRooms();
+    }, [user]);
+    useEffect(() => {
+        FetchMsUsers();
     }, []);
     useEffect(() => {
-        if (!user) {
-            setSelectedRoom(roomId);
-            fetchCalendars(roomId);
-        } else {
-            if (rooms.length > 0) {
-                const defaultRoom = rooms[0];
-                setSelectedRoom(defaultRoom._id);
-                fetchCalendars(defaultRoom._id);
-            }
+        if (selectedRoom && MsUsers.length > 0) {
+            fetchCalendars(selectedRoom);
         }
-    }, [rooms]);
-    const getColorCircle = (color) => {
-        const colorMap = {
-            "green": "🟩",
-            "blue": "🟦",
-            "yellow": "🟨",
-            "gold": "🟡",
-            "orange": "🟧",
-            "vip": "👑",
-            "grey": "⬜"
-        };
-
-        return colorMap[color] || "";
-    };
+    }, [selectedRoom, MsUsers]);
+    useEffect(() => {
+        if (!user) return;
+        if (roomId) {
+            setSelectedRoom(roomId);
+        } else if (rooms.length > 0) {
+            const defaultRoom = rooms[0];
+            setSelectedRoom(defaultRoom._id);
+        }
+    }, [rooms, user, roomId]);
     return (
         <div>
+            {user && (
+                <div className="row mb-4 align-items-center">
+                    <div className="col-md-6">
+                        <h5 className="fw-bold text-primary">
+                            {loading
+                                ? "Loading..."
+                                : user
+                                    ? `Hello ${user.name}, 👋`
+                                    : "Guest"}
+                        </h5>
+                    </div>
+                </div>
+            )}
             {/* Room Selection and Reservation Button */}
             <div className="row mb-4">
                 {user && (
@@ -373,7 +419,18 @@ const CalendarPage = () => {
                         </select>
                     </div>
                 )}
-                <div className={user ? "col-12 col-md-6 text-md-end" : "col-12 col-md-12 text-md-end"}>
+                {!user && (
+                    <div className="col-md-6 mt-3">
+                        <h4 className="fw-bold text-primary">
+                            {loading
+                                ? "Loading..."
+                                : user
+                                    ? `Hello ${user.name}, 👋`
+                                    : `${room.name + getColorCircle(room.room_color) || "Guest"}`}
+                        </h4>
+                    </div>
+                )}
+                <div className="col-12 col-md-6 text-md-end">
                     <button
                         className="btn btn-lg btn-success shadow-sm rounded-pill px-4 py-2"
                         data-bs-toggle="modal"
@@ -460,7 +517,7 @@ const CalendarPage = () => {
             </div>
             {/* Modal */}
             <div className="modal fade" id="reservationModal" tabIndex="-1" aria-labelledby="reservationModalLabel" aria-hidden="true" >
-                <div className="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+                <div className="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
                     <div className="modal-content">
                         <form onSubmit={handleSubmit}>
                             <div className="modal-header">
@@ -472,19 +529,19 @@ const CalendarPage = () => {
                                     {!user && (
                                         <div className="col-12">
                                             <label className="form-label">Organizer <span className="text-danger">*</span></label>
-                                            <select
-                                                className={`form-control ${errors.organizer ? "is-invalid" : ""}`}
+                                            <Select
+                                                className={errors.organizer ? "is-invalid" : ""}
                                                 name="organizer"
-                                                value={formData.organizer}
-                                                onChange={handleChange}
-                                            >
-                                                <option value="">Select Organizer</option>
-                                                {users.map((user) => (
-                                                    <option key={user._id} value={user._id}>
-                                                        {user.name} ({user.email})
-                                                    </option>
-                                                ))}
-                                            </select>
+                                                options={options}
+                                                value={options.find(opt => opt.value === formData.organizer) || null}
+                                                onChange={selectedOption =>
+                                                    handleChange({ target: { name: "organizer", value: selectedOption?.value } })
+                                                }
+                                                placeholder="Search for an organizer..."
+                                                isSearchable
+                                                menuPortalTarget={document.body}  // Render the dropdown outside the modal
+                                                styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}  // Ensure it's above the modal
+                                            />
                                             {errors.organizer && <div className="invalid-feedback">{errors.organizer}</div>}
                                         </div>
                                     )}
@@ -538,7 +595,7 @@ const CalendarPage = () => {
                     </div>
                 </div>
             </div>
-        </div>
+        </div >
     );
 };
 export default CalendarPage;

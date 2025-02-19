@@ -88,3 +88,12 @@ export const deleteReservation = async (req, res) => {
         res.status(500).json({ success: false, message: "Server Error" });
     }
 }
+export const deleteAllReservations = async (req, res) => {
+    try {
+        await Reservation.deleteMany({});
+        res.status(200).json({ success: true, message: "All Reservations deleted successfully" });
+    } catch (error) {
+        console.error("error in deleting all!! ", error);
+        res.status(500).json({ success: false, message: "Server Error" });
+    }
+}

@@ -6,8 +6,7 @@ const reservationSchema = new mongoose.Schema(
             required: true,
         },
         organizer: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "User",
+            type: String,
             required: true,
         },
         meetingRoomId: {
