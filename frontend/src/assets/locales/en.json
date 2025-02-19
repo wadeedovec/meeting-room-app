@@ -1,0 +1,41 @@
+{
+    "welcome": "Welcome!",
+    "login_subtext": "Login to continue with your account.",
+    "login_button": "Login via Microsoft",
+    "login_error": "Login failed. Please try again.",
+    "language": "Language",
+    "english": "English",
+    "turkish": "Turkish",
+    "logout": "Log Out",
+    "hello": "Hello",
+    "guest": "Guest",
+    "loading": "Loading...",
+    "newreservation": "New Reservation",
+    "organizer": "Organizer",
+    "searchOrganizer": "Search for an organizer",
+    "meetingSubject": "Meeting Subject",
+    "startTime": "Start Time",
+    "endTime": "End Time",
+    "save": "Save Reservation",
+    "saving": "Saving...",
+    "close": "Close",
+    "errors": {
+        "organizerRequired": "Organizer is required.",
+        "subjectRequired": "Meeting subject is required.",
+        "startTimeRequired": "Start time is required.",
+        "endTimeRequired": "End time is required.",
+        "startTimeBeforeEndTime": "Start time must be before end time.",
+        "meetingRoomRequired": "Meeting room is required.",
+        "pastDate": "Date must be in the future.",
+        "endTimeBeforeStartTime": "End time must be after start time.",
+        "failedToFetchReservations": "Failed to fetch reservations.",
+        "reservationConflict": "There is a reservation conflict.",
+        "unknown": "Unknown",
+        "organizerNotFound": "Organizer not found.",
+        "failedToCreateReservation": "Failed to create reservation."
+    },
+    "success": {
+        "reservationCreated": "Reservation created successfully.",
+        "reservationDeleted": "Reservation deleted successfully."
+    }
+}

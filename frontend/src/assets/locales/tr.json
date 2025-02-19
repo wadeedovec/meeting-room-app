@@ -1,0 +1,40 @@
+{
+    "welcome": "Hoş Geldiniz!",
+    "login_subtext": "Hesabınıza giriş yaparak devam edin.",
+    "login_button": "Microsoft ile Giriş Yap",
+    "login_error": "Giriş başarısız oldu. Lütfen tekrar deneyin.",
+    "language": "Dil",
+    "english": "İngilizce",
+    "turkish": "Türkçe",
+    "logout": "Çıkış Yap",
+    "hello": "Merhaba",
+    "guest": "Misafir",
+    "loading": "Yükleniyor...",
+    "newreservation": "Yeni Rezervasyon",
+    "organizer": "Organizatör",
+    "searchOrganizer": "Bir organizatör arayın",
+    "meetingSubject": "Toplantı Konusu",
+    "startTime": "Başlangıç Saati",
+    "endTime": "Bitiş Saati",
+    "save": "Rezervasyonu Kaydet",
+    "saving": "Kaydediliyor...",
+    "close": "Kapat",
+    "errors": {
+        "organizerRequired": "Organizatör gerekli.",
+        "subjectRequired": "Toplantı konusu gerekli.",
+        "startTimeRequired": "Başlangıç saati gerekli.",
+        "endTimeRequired": "Bitiş saati gerekli.",
+        "startTimeBeforeEndTime": "Başlangıç saati bitiş saatinden önce olmalıdır.",
+        "meetingRoomRequired": "Toplantı odası gerekli.",
+        "pastDate": "Tarih gelecekte olmalıdır.",
+        "endTimeBeforeStartTime": "Bitiş saati başlangıç saatinden sonra olmalıdır.",
+        "failedToFetchReservations": "Rezervasyonlar getirilemedi.",
+        "reservationConflict": "Rezervasyon çakışması var.",
+        "unknown": "Bilinmeyen",
+        "organizerNotFound": "Organizatör bulunamadı.",
+        "failedToCreateReservation": "Rezervasyon oluşturulamadı."
+    },
+    "success": {
+        "reservationCreated": "Rezervasyon başarıyla oluşturuldu."
+    }
+}

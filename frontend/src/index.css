@@ -124,3 +124,74 @@
     background-color: #005f77!important;
     color: white!important;
 }
+/* Full-screen gradient background */
+.login-bg {
+    background: linear-gradient(135deg, #1e3c72, #2a5298);
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Glassmorphism effect for card */
+.glass-card {
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+    border-radius: 15px;
+    padding: 30px;
+    width: 400px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    color: white;
+}
+
+/* Button hover effect */
+.btn-primary {
+    transition: all 0.3s ease-in-out;
+}
+
+.btn-primary:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 10px rgba(255, 255, 255, 0.3);
+}
+/* Full-screen animated background */
+.login-container {
+    background: linear-gradient(135deg, #1e1e2e, #282a36);
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+}
+
+/* Glassmorphism Effect for Login Card */
+.glass-card {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    padding: 30px;
+    width: 400px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    color: white;
+    transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+}
+
+/* Hover Animation */
+.glass-card:hover {
+    transform: scale(1.02);
+    box-shadow: 0 12px 40px rgba(255, 255, 255, 0.2);
+}
+
+/* Button Animations */
+.btn-primary {
+    transition: all 0.3s ease-in-out;
+}
+
+.btn-primary:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 10px rgba(255, 255, 255, 0.3);
+}
+
+/* Dropdown */
+.dropdown-menu {
+    min-width: 120px;
+}

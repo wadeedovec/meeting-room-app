@@ -13,7 +13,9 @@ import { Client } from "@microsoft/microsoft-graph-client";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Select from "react-select";
+import { useTranslation } from 'react-i18next';
 const CalendarPage = () => {
+    const { t } = useTranslation(); 
     const { roomId } = useParams();
     const { instance, accounts } = useMsal();
     const account = accounts[0];
@@ -54,22 +56,22 @@ const CalendarPage = () => {
     const validateForm = () => {
         const newErrors = {};
         if (roomId && !formData.organizer) {
-            newErrors.organizer = "Organizer is required.";
+            newErrors.organizer = t('errors.organizerRequired');
         }
         if (!formData.subject.trim()) {
-            newErrors.subject = "Meeting subject is required.";
+            newErrors.subject = t('errors.subjectRequired');
         }
         if (!formData.startTime) {
-            newErrors.startTime = "Start time is required.";
+            newErrors.startTime = t('errors.startTimeRequired');
         }
         if (!formData.endTime) {
-            newErrors.endTime = "End time is required.";
+            newErrors.endTime = t('errors.endTimeRequired');
         }
         if (formData.startTime && formData.endTime) {
             const startTime = new Date(formData.startTime);
             const endTime = new Date(formData.endTime);
             if (startTime >= endTime) {
-                newErrors.time = "Start time must be before end time.";
+                newErrors.time = t('errors.startTimeBeforeEndTime');
             }
         }
         setErrors(newErrors);
@@ -94,7 +96,7 @@ const CalendarPage = () => {
             return;
         }
         if (!selectedRoom) {
-            toast.error("Please select a meeting room.");
+            toast.error(t('errors.meetingRoomRequired'));
             return;
         } else {
             console.log("selected Room is: ", selectedRoom);
@@ -104,12 +106,12 @@ const CalendarPage = () => {
         const newEnd = new Date(formData.endTime);
         const now = new Date();
         if (newStart < now) {
-            toast.error("You cannot make a reservation in the past.");
+            toast.error(t('errors.pastDate'));
             setIsSubmitting(false);
             return;
         }
         if (newEnd <= newStart) {
-            toast.error("End time must be after start time.");
+            toast.error(t('errors.endTimeBeforeStartTime'));
             setIsSubmitting(false);
             return;
         }
@@ -118,13 +120,13 @@ const CalendarPage = () => {
                 `${import.meta.env.VITE_API_URI}reservations/room/${selectedRoom}`
             );
             if (!reservationsResponse.ok) {
-                toast.error("Failed to fetch existing reservations.");
+                toast.error(t('errors.failedToFetchReservations'));
                 return;
             }
             const response = await reservationsResponse.json();
             const existingReservations = response.data;
             if (!Array.isArray(existingReservations)) {
-                toast.error("Invalid response format for reservations.");
+                toast.error(t('errors.failedToFetchReservations'));
                 return;
             }
             const hasConflict = existingReservations.some(reservation => {
@@ -133,7 +135,7 @@ const CalendarPage = () => {
                 return (newStart < existingEnd && newEnd > existingStart);
             });
             if (hasConflict) {
-                toast.error("This time slot is already taken. Please select a different time.");
+                toast.error(t('errors.reservationConflict'));
                 return;
             }
             if (user) {
@@ -149,7 +151,7 @@ const CalendarPage = () => {
                         timeZone: "Asia/Jerusalem",
                     },
                     location: {
-                        displayName: selectedRoomObject ? selectedRoomObject.name : "Unknown",
+                        displayName: selectedRoomObject ? selectedRoomObject.name : t('errors.unknown'),
                     },
                     organizer: {
                         emailAddress: {
@@ -175,7 +177,7 @@ const CalendarPage = () => {
                 accessToken = tokenData.access_token;
                 const selectedRoomInfo = rooms.find((room) => room._id === roomId);
                 if (!selectedUser) {
-                    toast.error("Invalid organizer selected.");
+                    toast.error(t('errors.organizerNotFound'));
                     return;
                 }
                 const graphPayload = {
@@ -189,7 +191,7 @@ const CalendarPage = () => {
                         timeZone: "Asia/Jerusalem",
                     },
                     location: {
-                        displayName: selectedRoomInfo ? selectedRoomInfo.name : "Unknown",
+                        displayName: selectedRoomInfo ? selectedRoomInfo.name : t('errors.unknown'),
                     },
                     organizer: {
                         emailAddress: {
@@ -236,16 +238,16 @@ const CalendarPage = () => {
                     endTime: "",
                     meetingRoomId: null,
                 });
-                toast.success("Reservation created successfully!");
+                toast.success(t('success.reservationCreated'));
                 fetchCalendars(selectedRoom);
                 const modal = bootstrap.Modal.getInstance(document.getElementById("reservationModal"));
                 modal.hide();
             } else {
-                toast.error("Failed to save reservation in database.");
+                toast.error(t('errors.failedToCreateReservation'));
             }
         } catch (e) {
             console.error("Error:", e);
-            toast.error("Failed to create reservation.");
+            toast.error(t('errors.failedToCreateReservation'));
         } finally {
             setIsSubmitting(false);
         }
@@ -263,7 +265,7 @@ const CalendarPage = () => {
             }
             const getDisplayName = (user) => {
                 const msUser = MsUsers.find((u) => u.mail === user.organizer);
-                return msUser ? msUser.displayName : "Unknown";
+                return msUser ? msUser.displayName : t('errors.unknown');
             };
             const calendarEvents = data.data.map((event) => ({
                 start: event.start,
@@ -271,7 +273,7 @@ const CalendarPage = () => {
                 extendedProps: {
                     subject: event.subject || "No Subject",
                     organizer: getDisplayName(event),
-                    location: event.meetingRoomId?.name || "Unknown",
+                    location: event.meetingRoomId?.name || t('errors.unknown'),
                 },
             }));
             setEvents(calendarEvents);
@@ -389,10 +391,10 @@ const CalendarPage = () => {
                     <div className="col-md-6">
                         <h5 className="fw-bold text-primary">
                             {loading
-                                ? "Loading..."
+                                ? t('loading')
                                 : user
-                                    ? `Hello ${user.name}, 👋`
-                                    : "Guest"}
+                                    ? `${t('hello')} ${user.name} 👋,`
+                                    : t('guest')}
                         </h5>
                     </div>
                 </div>
@@ -414,7 +416,7 @@ const CalendarPage = () => {
                                     </option>
                                 ))
                             ) : (
-                                <option disabled>Loading rooms...</option>
+                                <option disabled>{t('loading')}</option>
                             )}
                         </select>
                     </div>
@@ -425,8 +427,8 @@ const CalendarPage = () => {
                             {loading
                                 ? "Loading..."
                                 : user
-                                    ? `Hello ${user.name}, 👋`
-                                    : `${room.name + getColorCircle(room.room_color) || "Guest"}`}
+                                    ? `${t('hello')} ${user.name}, 👋`
+                                    : `${room.name + getColorCircle(room.room_color) || t('errors.unknown')}}`}
                         </h4>
                     </div>
                 )}
@@ -436,7 +438,7 @@ const CalendarPage = () => {
                         data-bs-toggle="modal"
                         data-bs-target="#reservationModal"
                     >
-                        <RiAddLine /> <span className="ms-2">New Reservation</span>
+                        <RiAddLine /> <span className="ms-2">{t('newreservation')}</span>
                     </button>
                 </div>
             </div>
@@ -521,14 +523,14 @@ const CalendarPage = () => {
                     <div className="modal-content">
                         <form onSubmit={handleSubmit}>
                             <div className="modal-header">
-                                <h5 className="modal-title" id="reservationModalLabel">New Reservation</h5>
+                                <h5 className="modal-title" id="reservationModalLabel">{t('newreservation')}</h5>
                                 <button type="button" className="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                             </div>
                             <div className="modal-body">
                                 <div className="row g-3">
                                     {!user && (
                                         <div className="col-12">
-                                            <label className="form-label">Organizer <span className="text-danger">*</span></label>
+                                            <label className="form-label">{t('organizer')} <span className="text-danger">*</span></label>
                                             <Select
                                                 className={errors.organizer ? "is-invalid" : ""}
                                                 name="organizer"
@@ -537,7 +539,7 @@ const CalendarPage = () => {
                                                 onChange={selectedOption =>
                                                     handleChange({ target: { name: "organizer", value: selectedOption?.value } })
                                                 }
-                                                placeholder="Search for an organizer..."
+                                                placeholder={t('searchOrganizer')}
                                                 isSearchable
                                                 menuPortalTarget={document.body}  // Render the dropdown outside the modal
                                                 styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}  // Ensure it's above the modal
@@ -547,7 +549,7 @@ const CalendarPage = () => {
                                     )}
                                     {/* Meeting Subject */}
                                     <div className="col-12">
-                                        <label className="form-label">Meeting Subject <span className="text-danger">*</span></label>
+                                        <label className="form-label">{t('meetingSubject')} <span className="text-danger">*</span></label>
                                         <input
                                             type="text"
                                             className={`form-control ${errors.subject ? "is-invalid" : ""}`}
@@ -560,7 +562,7 @@ const CalendarPage = () => {
                                     </div>
                                     {/* Start Time */}
                                     <div className="col-md-6">
-                                        <label className="form-label">Start Time <span className="text-danger">*</span></label>
+                                        <label className="form-label">{t('startTime')} <span className="text-danger">*</span></label>
                                         <input
                                             type="datetime-local"
                                             className={`form-control ${errors.startTime ? "is-invalid" : ""}`}
@@ -572,7 +574,7 @@ const CalendarPage = () => {
                                     </div>
                                     {/* End Time */}
                                     <div className="col-md-6">
-                                        <label className="form-label">End Time <span className="text-danger">*</span></label>
+                                        <label className="form-label">{t('endTime')} <span className="text-danger">*</span></label>
                                         <input
                                             type="datetime-local"
                                             className={`form-control ${errors.endTime ? "is-invalid" : ""}`}
@@ -586,9 +588,9 @@ const CalendarPage = () => {
                                 </div>
                             </div>
                             <div className="modal-footer">
-                                <button type="button" className="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                <button type="button" className="btn btn-secondary" data-bs-dismiss="modal">{t('close')}</button>
                                 <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
-                                    {isSubmitting ? "Saving..." : "Save Reservation"}
+                                    {isSubmitting ? t('saving') : t('save')}
                                 </button>
                             </div>
                         </form>
