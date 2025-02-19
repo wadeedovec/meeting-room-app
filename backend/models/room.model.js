@@ -3,7 +3,8 @@ import mongoose from "mongoose";
 const roomSchema = new mongoose.Schema(
     {
         name: {
-            type: String,
+            type: Map,
+            of: String,
             required: true,
         },
         capacity: {

@@ -1,4 +1,5 @@
 {
+    "locale": "en",
     "welcome": "Welcome!",
     "login_subtext": "Login to continue with your account.",
     "login_button": "Login via Microsoft",

@@ -4,6 +4,7 @@ import FullCalendar from "@fullcalendar/react";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import interactionPlugin from "@fullcalendar/interaction";
+import allLocales from '@fullcalendar/core/locales-all'
 import { useMsal } from "@azure/msal-react";
 import { useParams } from "react-router-dom";
 import { useUser } from "../../context/UserContext";
@@ -15,7 +16,7 @@ import "react-toastify/dist/ReactToastify.css";
 import Select from "react-select";
 import { useTranslation } from 'react-i18next';
 const CalendarPage = () => {
-    const { t } = useTranslation(); 
+    const { t } = useTranslation();
     const { roomId } = useParams();
     const { instance, accounts } = useMsal();
     const account = accounts[0];
@@ -360,6 +361,9 @@ const CalendarPage = () => {
         setSelectedRoom(roomId);
         fetchCalendars(roomId);
     };
+    const getRoomNameTranslation = (room, locale) => {
+        return room.name[locale] || room.name.en; // Default to English if locale is not available
+    };
     useEffect(() => {
         if (!user) {
             fetchMeetingRoom();
@@ -412,7 +416,7 @@ const CalendarPage = () => {
                             {rooms.length > 0 ? (
                                 rooms.map((room) => (
                                     <option key={room._id} value={room._id}>
-                                        {room.name} ({room.capacity}) {getColorCircle(room.room_color)}
+                                        {getRoomNameTranslation(room, t('locale'))} ({room.capacity}) {getColorCircle(room.room_color)}
                                     </option>
                                 ))
                             ) : (
@@ -447,6 +451,8 @@ const CalendarPage = () => {
                 <div className="card shadow-lg border-0 rounded-3">
                     <div className="card-body p-3">
                         <FullCalendar
+                            locales={allLocales}
+                            locale={t('locale') || 'en'}
                             plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
                             initialView="timeGridWeek"
                             headerToolbar={{
