@@ -5,27 +5,24 @@ import timeGridPlugin from "@fullcalendar/timegrid";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import allLocales from '@fullcalendar/core/locales-all'
-import { useMsal } from "@azure/msal-react";
 import { useParams } from "react-router-dom";
 import { useUser } from "../../context/UserContext";
-import { AuthCodeMSALBrowserAuthenticationProvider } from "@microsoft/microsoft-graph-client/authProviders/authCodeMsalBrowser";
-import { InteractionType } from "@azure/msal-browser";
-import { Client } from "@microsoft/microsoft-graph-client";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Select from "react-select";
 import { useTranslation } from 'react-i18next';
 const CalendarPage = () => {
     const { t, i18n } = useTranslation();
-    const locale = i18n.language; // Get current language
+    const locale = i18n.language;
     const { roomId } = useParams();
-    const { instance, accounts } = useMsal();
-    const account = accounts[0];
     const [events, setEvents] = useState([]);
     const { user } = useUser();
     const [MsUsers, setMsUsers] = useState([]);
     const { loading } = useUser();
     const [room, setRoom] = useState("");
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    let accessToken = null;
+    let expiresAt = null;
     const options = MsUsers.map(user => ({
         value: user.id,
         label: user.displayName
@@ -79,9 +76,9 @@ const CalendarPage = () => {
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    let accessToken = null;
     const handleSubmit = async (e) => {
+        console.log("selectedRoom is: ", selectedRoom);
+        console.log("formData is: ", formData);
         e.preventDefault();
         if (!validateForm() || isSubmitting) {
             if (errors.organizer) {
@@ -100,8 +97,6 @@ const CalendarPage = () => {
         if (!selectedRoom) {
             toast.error(t('errors.meetingRoomRequired'));
             return;
-        } else {
-            console.log("selected Room is: ", selectedRoom);
         }
         setIsSubmitting(true);
         const newStart = new Date(formData.startTime);
@@ -118,20 +113,7 @@ const CalendarPage = () => {
             return;
         }
         try {
-            const reservationsResponse = await fetch(
-                `${import.meta.env.VITE_API_URI}reservations/room/${selectedRoom}`
-            );
-            if (!reservationsResponse.ok) {
-                toast.error(t('errors.failedToFetchReservations'));
-                return;
-            }
-            const response = await reservationsResponse.json();
-            const existingReservations = response.data;
-            if (!Array.isArray(existingReservations)) {
-                toast.error(t('errors.failedToFetchReservations'));
-                return;
-            }
-            const hasConflict = existingReservations.some(reservation => {
+            const hasConflict = events.some(reservation => {
                 const existingStart = new Date(reservation.start);
                 const existingEnd = new Date(reservation.end);
                 return (newStart < existingEnd && newEnd > existingStart);
@@ -140,92 +122,59 @@ const CalendarPage = () => {
                 toast.error(t('errors.reservationConflict'));
                 return;
             }
-            if (user) {
-                const selectedRoomObject = rooms.find((room) => room._id === selectedRoom);
-                const graphPayload = {
-                    subject: formData.subject,
-                    start: {
-                        dateTime: formData.startTime,
-                        timeZone: "Asia/Jerusalem",
-                    },
-                    end: {
-                        dateTime: formData.endTime,
-                        timeZone: "Asia/Jerusalem",
-                    },
-                    location: {
-                        displayName: selectedRoomObject ? selectedRoomObject.name : t('errors.unknown'),
-                    },
-                    organizer: {
-                        emailAddress: {
-                            address: user.email,
-                            name: user.name,
-                        },
-                    },
-                };
-                const graphClient = createGraphClient(account);
-                await graphClient.api("https://graph.microsoft.com/v1.0/me/events").post(graphPayload);
-            } else {
-                const selectedUser = MsUsers.find((user) => user.id === formData.organizer);
-                const tokenResponse = await fetch(`${import.meta.env.VITE_API_URI}getAccessToken`, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                });
-                if (!tokenResponse.ok) {
-                    throw new Error("Failed to get access token");
-                }
-                const tokenData = await tokenResponse.json();
-                accessToken = tokenData.access_token;
-                const selectedRoomInfo = rooms.find((room) => room._id === roomId);
-                if (!selectedUser) {
-                    toast.error(t('errors.organizerNotFound'));
-                    return;
-                }
-                const graphPayload = {
-                    subject: formData.subject,
-                    start: {
-                        dateTime: formData.startTime,
-                        timeZone: "Asia/Jerusalem",
-                    },
-                    end: {
-                        dateTime: formData.endTime,
-                        timeZone: "Asia/Jerusalem",
-                    },
-                    location: {
-                        displayName: selectedRoomInfo ? selectedRoomInfo.name : t('errors.unknown'),
-                    },
-                    organizer: {
-                        emailAddress: {
-                            address: selectedUser.mail,
-                            name: selectedUser.displayName,
-                        },
-                    },
-                };
-                const headers = {
-                    "Authorization": `Bearer ${accessToken}`,
-                    "Content-Type": "application/json",
-                };
-                const response = await fetch(`https://graph.microsoft.com/v1.0/users/${selectedUser.mail}/calendar/events`, {
-                    method: "POST",
-                    headers: headers,
-                    body: JSON.stringify(graphPayload),
-                });
-                if (response.ok) {
-                    console.log("Event created successfully");
-                } else {
-                    const error = await response.json();
-                    console.error("Error creating event:", error);
-                }
+            const selectedUser = user ? user : MsUsers.find((user) => user.id === formData.organizer);
+            console.log("selectedUser is: ", selectedUser);
+            const accessToken = await getAccessToken();
+            const selectedRoomInfo = user ? rooms.find((room) => room._id === selectedRoom) : rooms.find((room) => room._id === roomId);
+            console.log("selectedRoomInfo is: ", selectedRoomInfo);
+            if (!selectedUser) {
+                toast.error(t('errors.organizerNotFound'));
+                return;
             }
-            const selectedUser = MsUsers.find((user) => user.id === formData.organizer);
+            const graphPayload = {
+                subject: formData.subject,
+                start: {
+                    dateTime: formData.startTime,
+                    timeZone: "Asia/Jerusalem",
+                },
+                end: {
+                    dateTime: formData.endTime,
+                    timeZone: "Asia/Jerusalem",
+                },
+                location: {
+                    displayName: selectedRoomInfo ? selectedRoomInfo.name[locale] : t('errors.unknown'),
+                },
+                organizer: {
+                    emailAddress: {
+                        address: user ? selectedUser.email : selectedUser.mail,
+                        name: user ? selectedUser.name : selectedUser.displayName,
+                    },
+                },
+            };
+            console.log("graphPayload is: ", graphPayload);
+            const headers = {
+                "Authorization": `Bearer ${accessToken}`,
+                "Content-Type": "application/json",
+            };
+            const response = await fetch(`https://graph.microsoft.com/v1.0/users/${user ? selectedUser.email : selectedUser.mail}/calendar/events`, {
+                method: "POST",
+                headers: headers,
+                body: JSON.stringify(graphPayload),
+            });
+            if (response.ok) {
+                console.log("Event created successfully");
+            } else {
+                const error = await response.json();
+                console.error("Error creating event:", error);
+            }
             const dbPayload = {
                 subject: formData.subject,
                 start: formData.startTime,
                 end: formData.endTime,
-                organizer: user ? user.email : selectedUser.mail,
+                organizer: user ? selectedUser.email : selectedUser.mail,
                 meetingRoomId: selectedRoom,
             };
+            console.log("dbPayload is: ", dbPayload);
             const dbResponse = await fetch(`${import.meta.env.VITE_API_URI}reservations`, {
                 method: "POST",
                 headers: {
@@ -233,7 +182,9 @@ const CalendarPage = () => {
                 },
                 body: JSON.stringify(dbPayload),
             });
-            if (dbResponse.ok) {
+            if (!dbResponse.ok || !response.ok) {
+                throw new Error("Failed to create reservation");
+            } else {
                 setFormData({
                     subject: "",
                     startTime: "",
@@ -241,11 +192,9 @@ const CalendarPage = () => {
                     meetingRoomId: null,
                 });
                 toast.success(t('success.reservationCreated'));
-                fetchCalendars(selectedRoom);
+                fetchReservations(selectedRoom);
                 const modal = bootstrap.Modal.getInstance(document.getElementById("reservationModal"));
                 modal.hide();
-            } else {
-                toast.error(t('errors.failedToCreateReservation'));
             }
         } catch (e) {
             console.error("Error:", e);
@@ -254,7 +203,7 @@ const CalendarPage = () => {
             setIsSubmitting(false);
         }
     };
-    const fetchCalendars = async (roomId) => {
+    const fetchReservations = async (roomId) => {
         try {
             const response = await fetch(`${import.meta.env.VITE_API_URI}reservations/room/${roomId}`);
             if (!response.ok) {
@@ -283,7 +232,11 @@ const CalendarPage = () => {
             console.error("Error fetching data:", error);
         }
     };
-    const FetchMsUsers = async () => {
+    const getAccessToken = async () => {
+        const now = new Date().getTime();
+        if (accessToken && expiresAt && now < expiresAt) {
+            return accessToken;
+        }
         const tokenResponse = await fetch(`${import.meta.env.VITE_API_URI}getAccessToken`, {
             method: "POST",
             headers: {
@@ -295,6 +248,11 @@ const CalendarPage = () => {
         }
         const tokenData = await tokenResponse.json();
         accessToken = tokenData.access_token;
+        expiresAt = new Date().getTime() + (tokenData.expires_in * 1000);
+        return accessToken;
+    };
+    const FetchMsUsers = async () => {
+        const accessToken = await getAccessToken();
         const headers = { "Authorization": `Bearer ${accessToken}` };
         const response = await fetch("https://graph.microsoft.com/v1.0/users?$top=999", { headers });
         if (!response.ok) {
@@ -304,11 +262,8 @@ const CalendarPage = () => {
         setMsUsers(data.value);
     };
     const fetchRooms = async () => {
-        const controller = new AbortController();
         try {
-            const response = await fetch(`${import.meta.env.VITE_API_URI}rooms/`, {
-                signal: controller.signal,
-            });
+            const response = await fetch(`${import.meta.env.VITE_API_URI}rooms/`);
             if (!response.ok) {
                 throw new Error("Failed to fetch rooms");
             }
@@ -319,11 +274,8 @@ const CalendarPage = () => {
                 console.error("Error: API returned success=false");
             }
         } catch (error) {
-            if (error.name !== "AbortError") {
-                console.error("Error fetching rooms:", error);
-            }
+            console.error("Error fetching rooms:", error);
         }
-        return () => controller.abort();
     };
     const fetchMeetingRoom = async () => {
         try {
@@ -337,39 +289,18 @@ const CalendarPage = () => {
             console.error("Error fetching Room:", error);
         }
     };
-    const createGraphClient = (account) => {
-        const authProviderOptions = {
-            account,
-            interactionType: InteractionType.Popup,
-            scopes: [
-                "user.read",
-                "Calendars.Read",
-                "Calendars.Read.Shared",
-                "Calendars.ReadWrite",
-                "Team.ReadBasic.All",
-                "User.Read.All",
-                "Directory.Read.All",
-            ],
-        };
-        const authProvider = new AuthCodeMSALBrowserAuthenticationProvider(
-            instance,
-            authProviderOptions
-        );
-        return Client.initWithMiddleware({ authProvider });
-    };
     const handleRoomChange = (e) => {
         const roomId = e.target.value;
         setSelectedRoom(roomId);
-        fetchCalendars(roomId);
+        fetchReservations(roomId);
     };
     const getRoomNameTranslation = (room) => {
         if (!room || !room.name) {
             console.warn("getRoomNameTranslation: room is undefined or has no name", room);
             return "Unknown Room";
         }
-        return room.name[locale] || room.name.tr || "Unnamed Room"; // Default to English, then Turkish, then fallback
+        return room.name[locale] || room.name.tr || "Unnamed Room";
     };
-
     useEffect(() => {
         if (!user) {
             fetchMeetingRoom();
@@ -382,7 +313,7 @@ const CalendarPage = () => {
     }, []);
     useEffect(() => {
         if (selectedRoom && MsUsers.length > 0) {
-            fetchCalendars(selectedRoom);
+            fetchReservations(selectedRoom);
         }
     }, [selectedRoom, MsUsers]);
     useEffect(() => {
