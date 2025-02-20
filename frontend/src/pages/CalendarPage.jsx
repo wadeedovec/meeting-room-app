@@ -16,7 +16,8 @@ import "react-toastify/dist/ReactToastify.css";
 import Select from "react-select";
 import { useTranslation } from 'react-i18next';
 const CalendarPage = () => {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
+    const locale = i18n.language; // Get current language
     const { roomId } = useParams();
     const { instance, accounts } = useMsal();
     const account = accounts[0];
@@ -361,9 +362,14 @@ const CalendarPage = () => {
         setSelectedRoom(roomId);
         fetchCalendars(roomId);
     };
-    const getRoomNameTranslation = (room, locale) => {
-        return room.name[locale] || room.name.en; // Default to English if locale is not available
+    const getRoomNameTranslation = (room) => {
+        if (!room || !room.name) {
+            console.warn("getRoomNameTranslation: room is undefined or has no name", room);
+            return "Unknown Room";
+        }
+        return room.name[locale] || room.name.tr || "Unnamed Room"; // Default to English, then Turkish, then fallback
     };
+
     useEffect(() => {
         if (!user) {
             fetchMeetingRoom();
@@ -416,7 +422,7 @@ const CalendarPage = () => {
                             {rooms.length > 0 ? (
                                 rooms.map((room) => (
                                     <option key={room._id} value={room._id}>
-                                        {getRoomNameTranslation(room, t('locale'))} ({room.capacity}) {getColorCircle(room.room_color)}
+                                        {getRoomNameTranslation(room)} ({room.capacity}) {getColorCircle(room.room_color)}
                                     </option>
                                 ))
                             ) : (
@@ -432,7 +438,7 @@ const CalendarPage = () => {
                                 ? "Loading..."
                                 : user
                                     ? `${t('hello')} ${user.name}, 👋`
-                                    : `${room.name + getColorCircle(room.room_color) || t('errors.unknown')}}`}
+                                    : `${getRoomNameTranslation(room) + getColorCircle(room.room_color) || t('errors.unknown')}}`}
                         </h4>
                     </div>
                 )}
