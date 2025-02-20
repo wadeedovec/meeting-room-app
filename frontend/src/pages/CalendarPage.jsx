@@ -116,7 +116,7 @@ const CalendarPage = () => {
             const hasConflict = events.some(reservation => {
                 const existingStart = new Date(reservation.start).toISOString();
                 const existingEnd = new Date(reservation.end).toISOString();
-                return (newStartUTC < existingEnd && newEndUTC > existingStart);
+                return newStartUTC < existingEnd && newEndUTC > existingStart;
             });
             if (hasConflict) {
                 toast.error(t('errors.reservationConflict'));
@@ -170,8 +170,8 @@ const CalendarPage = () => {
             }
             const dbPayload = {
                 subject: formData.subject,
-                start: formData.startTime,
-                end: formData.endTime,
+                start: newStartUTC,
+                end: newEndUTC,
                 organizer: user ? selectedUser.email : selectedUser.mail,
                 meetingRoomId: selectedRoom,
             };
@@ -417,7 +417,6 @@ const CalendarPage = () => {
                                         <div
                                             style={{
                                                 fontSize: '12px',
-                                                
                                                 overflow: 'hidden',
                                                 textOverflow: 'ellipsis',
                                                 whiteSpace: 'nowrap', /* Prevent wrapping */
@@ -430,7 +429,6 @@ const CalendarPage = () => {
                                         <div
                                             style={{
                                                 fontSize: '10px',
-                                                
                                                 overflow: 'hidden',
                                                 textOverflow: 'ellipsis',
                                                 whiteSpace: 'nowrap',
