@@ -114,14 +114,15 @@ const CalendarPage = () => {
         }
         try {
             const hasConflict = events.some(reservation => {
-                const existingStart = new Date(reservation.start);
-                const existingEnd = new Date(reservation.end);
+                const existingStart = new Date(reservation.start).toISOString();
+                const existingEnd = new Date(reservation.end).toISOString();
                 return (newStartUTC < existingEnd && newEndUTC > existingStart);
             });
             if (hasConflict) {
                 toast.error(t('errors.reservationConflict'));
                 return;
             }
+            console.log("Conflicts:", hasConflict);
             const selectedUser = user ? user : MsUsers.find((user) => user.id === formData.organizer);
             console.log("selectedUser is: ", selectedUser);
             const accessToken = await getAccessToken();
@@ -416,7 +417,7 @@ const CalendarPage = () => {
                                         <div
                                             style={{
                                                 fontSize: '12px',
-                                                color: '#fff',
+                                                
                                                 overflow: 'hidden',
                                                 textOverflow: 'ellipsis',
                                                 whiteSpace: 'nowrap', /* Prevent wrapping */
@@ -429,7 +430,7 @@ const CalendarPage = () => {
                                         <div
                                             style={{
                                                 fontSize: '10px',
-                                                color: '#fff',
+                                                
                                                 overflow: 'hidden',
                                                 textOverflow: 'ellipsis',
                                                 whiteSpace: 'nowrap',
