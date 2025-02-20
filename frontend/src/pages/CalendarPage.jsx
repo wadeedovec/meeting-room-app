@@ -99,15 +99,15 @@ const CalendarPage = () => {
             return;
         }
         setIsSubmitting(true);
-        const newStart = new Date(formData.startTime);
-        const newEnd = new Date(formData.endTime);
+        const newStartUTC = new Date(formData.startTime).toISOString();
+        const newEndUTC = new Date(formData.endTime).toISOString();
         const now = new Date();
-        if (newStart < now) {
+        if (newStartUTC < now) {
             toast.error(t('errors.pastDate'));
             setIsSubmitting(false);
             return;
         }
-        if (newEnd <= newStart) {
+        if (newEndUTC <= newStartUTC) {
             toast.error(t('errors.endTimeBeforeStartTime'));
             setIsSubmitting(false);
             return;
@@ -116,7 +116,7 @@ const CalendarPage = () => {
             const hasConflict = events.some(reservation => {
                 const existingStart = new Date(reservation.start);
                 const existingEnd = new Date(reservation.end);
-                return (newStart < existingEnd && newEnd > existingStart);
+                return (newStartUTC < existingEnd && newEndUTC > existingStart);
             });
             if (hasConflict) {
                 toast.error(t('errors.reservationConflict'));
@@ -134,12 +134,12 @@ const CalendarPage = () => {
             const graphPayload = {
                 subject: formData.subject,
                 start: {
-                    dateTime: formData.startTime,
-                    timeZone: "Asia/Jerusalem",
+                    dateTime: newStartUTC,
+                    timeZone: "UTC",
                 },
                 end: {
-                    dateTime: formData.endTime,
-                    timeZone: "Asia/Jerusalem",
+                    dateTime: newEndUTC,
+                    timeZone: "UTC",
                 },
                 location: {
                     displayName: selectedRoomInfo ? selectedRoomInfo.name[locale] : t('errors.unknown'),
