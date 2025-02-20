@@ -77,8 +77,6 @@ const CalendarPage = () => {
         return Object.keys(newErrors).length === 0;
     };
     const handleSubmit = async (e) => {
-        console.log("selectedRoom is: ", selectedRoom);
-        console.log("formData is: ", formData);
         e.preventDefault();
         if (!validateForm() || isSubmitting) {
             if (errors.organizer) {
@@ -122,12 +120,9 @@ const CalendarPage = () => {
                 toast.error(t('errors.reservationConflict'));
                 return;
             }
-            console.log("Conflicts:", hasConflict);
             const selectedUser = user ? user : MsUsers.find((user) => user.id === formData.organizer);
-            console.log("selectedUser is: ", selectedUser);
             const accessToken = await getAccessToken();
             const selectedRoomInfo = user ? rooms.find((room) => room._id === selectedRoom) : rooms.find((room) => room._id === roomId);
-            console.log("selectedRoomInfo is: ", selectedRoomInfo);
             if (!selectedUser) {
                 toast.error(t('errors.organizerNotFound'));
                 return;
@@ -152,7 +147,6 @@ const CalendarPage = () => {
                     },
                 },
             };
-            console.log("graphPayload is: ", graphPayload);
             const headers = {
                 "Authorization": `Bearer ${accessToken}`,
                 "Content-Type": "application/json",
@@ -175,7 +169,6 @@ const CalendarPage = () => {
                 organizer: user ? selectedUser.email : selectedUser.mail,
                 meetingRoomId: selectedRoom,
             };
-            console.log("dbPayload is: ", dbPayload);
             const dbResponse = await fetch(`${import.meta.env.VITE_API_URI}reservations`, {
                 method: "POST",
                 headers: {
@@ -238,10 +231,12 @@ const CalendarPage = () => {
         if (accessToken && expiresAt && now < expiresAt) {
             return accessToken;
         }
+        const apiKey = import.meta.env.VITE_INTERNAL_API_KEY;
         const tokenResponse = await fetch(`${import.meta.env.VITE_API_URI}getAccessToken`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
+                "x-api-key": apiKey,
             },
         });
         if (!tokenResponse.ok) {

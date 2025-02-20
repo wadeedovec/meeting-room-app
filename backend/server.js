@@ -19,12 +19,19 @@ app.get('/api/', async (req, res) => {
     }
 });
 app.post('/api/getAccessToken', async (req, res) => {
+    const apiKey = req.headers['x-api-key'];
+
+    if (!apiKey || apiKey !== process.env.INTERNAL_API_KEY) {
+        return res.status(403).json({ error: "Unauthorized access" });
+    }
+
     const url = `https://login.microsoftonline.com/${process.env.TENANT_ID}/oauth2/v2.0/token`;
     const params = new URLSearchParams();
     params.append("grant_type", "client_credentials");
     params.append("client_id", process.env.CLIENT_ID);
     params.append("client_secret", process.env.CLIENT_SECRET);
     params.append("scope", "https://graph.microsoft.com/.default");
+
     try {
         const response = await fetch(url, {
             method: "POST",
@@ -32,6 +39,7 @@ app.post('/api/getAccessToken', async (req, res) => {
             body: params.toString(),
         });
         const data = await response.json();
+
         if (response.ok) {
             res.json({ access_token: data.access_token });
         } else {
@@ -42,6 +50,7 @@ app.post('/api/getAccessToken', async (req, res) => {
         res.status(500).json({ error: "Internal server error" });
     }
 });
+
 app.use("/api/rooms", roomRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/reservations", reservationRoutes);
