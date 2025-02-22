@@ -18,6 +18,7 @@ const CalendarPage = () => {
     const [events, setEvents] = useState([]);
     const { user } = useUser();
     const [MsUsers, setMsUsers] = useState([]);
+    const [MsEvents, setMsEvents] = useState([]);
     const { loading } = useUser();
     const [room, setRoom] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -63,8 +64,7 @@ const CalendarPage = () => {
         });
         const modal = new bootstrap.Modal(document.getElementById("reservationModal"));
         modal.show();
-        console.log("Start Time:", eventStartUTC);
-        console.log("End Time:", eventEndUTC);
+
     };
     const resetEventData = () => {
         setSelectedEvent(null);
@@ -166,19 +166,17 @@ const CalendarPage = () => {
             }
             const data = await response.json();
             const events = data.data;
-            console.log("Events:", events);
             const hasConflict = events.some(reservation => {
                 const existingStart = new Date(reservation.start).toISOString();
                 const existingEnd = new Date(reservation.end).toISOString();
-                if (selectedEvent && reservation.id === selectedEvent.id) {
+
+
+                if (selectedEvent && reservation._id === selectedEvent.id) {
                     return false;
                 }
                 const newStartUTCconflict = new Date(`${formData.startTime}:00.000Z`).toISOString();
                 const newEndUTCconflict = new Date(`${formData.endTime}:00.000Z`).toISOString();
-                console.log("Existing Start:", existingStart);
-                console.log("Existing End:", existingEnd);
-                console.log("New Start:", newStartUTCconflict);
-                console.log("New End:", newEndUTCconflict);
+
 
                 return newStartUTCconflict < existingEnd && newEndUTCconflict > existingStart;
 
@@ -241,9 +239,7 @@ const CalendarPage = () => {
                     isListed: true,
                     eventId: selectedEvent.msId,
                 };
-                console.log("DB Payload:", dbPayload);
-                console.log("Original Start Time:", formData.startTime);
-                console.log("Original as UTC:", new Date(formData.startTime).toISOString());
+
 
                 const dbResponse = await fetch(`${import.meta.env.VITE_API_URI}reservations/${selectedEvent.id}`, {
                     method: "PUT",
@@ -285,7 +281,6 @@ const CalendarPage = () => {
                         isListed: true,
                         eventId: createdEvent.id,
                     };
-                    console.log("DB Payload:", dbPayload);
                     // Handle DB operation
                     const dbResponse = await fetch(`${import.meta.env.VITE_API_URI}reservations`, {
                         method: "POST",
@@ -413,7 +408,6 @@ const CalendarPage = () => {
                 },
             }));
             setEvents(calendarEvents);
-            console.log("Fetched reservations:", calendarEvents);
         } catch (error) {
             console.error("Error fetching data:", error);
         }
@@ -489,12 +483,17 @@ const CalendarPage = () => {
         }
         return room.name[locale] || room.name.tr || "Unnamed Room";
     };
+
+
+
+
     useEffect(() => {
         if (!user) {
             fetchMeetingRoom();
             setSelectedRoom(roomId);
         }
         fetchRooms();
+        FetchMsEvents();
     }, [user]);
     useEffect(() => {
         FetchMsUsers();
@@ -606,7 +605,6 @@ const CalendarPage = () => {
 
                             eventClick={(info) => {
                                 if (user.name === info.event.extendedProps.organizer) {
-                                    console.log(info.event.extendedProps.organizer);
                                     const currentDateTime = new Date();
                                     const eventStartTime = new Date(info.event.start);
                                     if (eventStartTime < currentDateTime) {

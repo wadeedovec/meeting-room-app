@@ -1,6 +1,7 @@
 import React from "react";
 import { Route, BrowserRouter as Router, Routes } from "react-router-dom";
 import CalendarPage from "../pages/CalendarPage";
+import EventsPage from "../pages/getEvents";  // Change to PascalCase
 import AuthRedirectHandler from "../pages/AuthRedirectHandler";
 
 import Login from "../pages/Login";
@@ -12,6 +13,7 @@ const AppRoutes = () => {
         <Router>
             <Routes>
                 <Route path="/login" element={<Login />} />
+                <Route path="/events" element={<EventsPage />} />
                 <Route path="/redirect" element={<AuthRedirectHandler />} /> {/* Handle the redirect */}
 
                 <Route element={<ProtectedRoutes />}>
