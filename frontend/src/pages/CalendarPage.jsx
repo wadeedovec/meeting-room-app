@@ -27,8 +27,6 @@ const CalendarPage = () => {
         value: user.id,
         label: user.displayName
     }));
-    const [rooms, setRooms] = useState("");
-    const [selectedRoom, setSelectedRoom] = useState("");
     const getColorCircle = (color) => {
         const colorMap = {
             "green": "🟩",
@@ -41,11 +39,47 @@ const CalendarPage = () => {
         };
         return colorMap[color] || "";
     };
+    const [rooms, setRooms] = useState("");
+    const [selectedRoom, setSelectedRoom] = useState("");
+    const [selectedEvent, setSelectedEvent] = useState(null);
+    const handleEventClick = (event) => {
+        const eventStartUTC = new Date(event.start).toISOString().slice(0, 16);
+        const eventEndUTC = new Date(event.end).toISOString().slice(0, 16);
+
+
+        const selected = {
+            id: event.id,
+            msId: event.extendedProps.mSid,
+            organizer: event.extendedProps.organizer,
+            subject: event.extendedProps.subject,
+            startTime: eventStartUTC,
+            endTime: eventEndUTC
+        };
+        setSelectedEvent(selected);
+        setFormData({
+            subject: event.extendedProps.subject,
+            startTime: eventStartUTC,
+            endTime: eventEndUTC,
+        });
+        const modal = new bootstrap.Modal(document.getElementById("reservationModal"));
+        modal.show();
+        console.log("Start Time:", eventStartUTC);
+        console.log("End Time:", eventEndUTC);
+    };
+    const resetEventData = () => {
+        setSelectedEvent(null);
+        setFormData({
+            organizer: "",
+            subject: "",
+            startTime: "",
+            endTime: "",
+        });
+    };
     const [formData, setFormData] = useState({
         organizer: "",
-        subject: "",
-        startTime: "",
-        endTime: "",
+        subject: selectedEvent?.subject || "",
+        startTime: selectedEvent?.startTime || "",
+        endTime: selectedEvent?.endTime || "",
     });
     const [errors, setErrors] = useState({});
     const handleChange = (e) => {
@@ -53,6 +87,15 @@ const CalendarPage = () => {
         setErrors((prev) => ({ ...prev, [e.target.name]: "" }));
     };
     const validateForm = () => {
+        let newStartUTC = null;
+        let newEndUTC = null;
+        if (formData.startTime) {
+            newStartUTC = new Date(`${formData.startTime}:00.000Z`);
+        }
+        if (formData.endTime) {
+            newEndUTC = new Date(`${formData.endTime}:00.000Z`);
+        }
+
         const newErrors = {};
         if (roomId && !formData.organizer) {
             newErrors.organizer = t('errors.organizerRequired');
@@ -60,16 +103,14 @@ const CalendarPage = () => {
         if (!formData.subject.trim()) {
             newErrors.subject = t('errors.subjectRequired');
         }
-        if (!formData.startTime) {
+        if (!newStartUTC) {
             newErrors.startTime = t('errors.startTimeRequired');
         }
-        if (!formData.endTime) {
+        if (!newEndUTC) {
             newErrors.endTime = t('errors.endTimeRequired');
         }
-        if (formData.startTime && formData.endTime) {
-            const startTime = new Date(formData.startTime);
-            const endTime = new Date(formData.endTime);
-            if (startTime >= endTime) {
+        if (newStartUTC && newEndUTC) {
+            if (newStartUTC >= newEndUTC) {
                 newErrors.time = t('errors.startTimeBeforeEndTime');
             }
         }
@@ -78,6 +119,16 @@ const CalendarPage = () => {
     };
     const handleSubmit = async (e) => {
         e.preventDefault();
+        const now = new Date().toISOString();
+        let newStartUTC = null;
+        let newEndUTC = null;
+        if (formData.startTime) {
+            newStartUTC = new Date(`${formData.startTime}:00.000Z`).toISOString();
+        }
+        if (formData.endTime) {
+            newEndUTC = new Date(`${formData.endTime}:00.000Z`).toISOString();
+        }
+
         if (!validateForm() || isSubmitting) {
             if (errors.organizer) {
                 toast.error(errors.organizer);
@@ -97,9 +148,7 @@ const CalendarPage = () => {
             return;
         }
         setIsSubmitting(true);
-        const newStartUTC = new Date(formData.startTime).toISOString();
-        const newEndUTC = new Date(formData.endTime).toISOString();
-        const now = new Date();
+
         if (newStartUTC < now) {
             toast.error(t('errors.pastDate'));
             setIsSubmitting(false);
@@ -111,10 +160,28 @@ const CalendarPage = () => {
             return;
         }
         try {
+            const response = await fetch(`${import.meta.env.VITE_API_URI}reservations/room/${selectedRoom}`);
+            if (!response.ok) {
+                throw new Error("Failed to fetch reservations");
+            }
+            const data = await response.json();
+            const events = data.data;
+            console.log("Events:", events);
             const hasConflict = events.some(reservation => {
                 const existingStart = new Date(reservation.start).toISOString();
                 const existingEnd = new Date(reservation.end).toISOString();
-                return newStartUTC < existingEnd && newEndUTC > existingStart;
+                if (selectedEvent && reservation.id === selectedEvent.id) {
+                    return false;
+                }
+                const newStartUTCconflict = new Date(`${formData.startTime}:00.000Z`).toISOString();
+                const newEndUTCconflict = new Date(`${formData.endTime}:00.000Z`).toISOString();
+                console.log("Existing Start:", existingStart);
+                console.log("Existing End:", existingEnd);
+                console.log("New Start:", newStartUTCconflict);
+                console.log("New End:", newEndUTCconflict);
+
+                return newStartUTCconflict < existingEnd && newEndUTCconflict > existingStart;
+
             });
             if (hasConflict) {
                 toast.error(t('errors.reservationConflict'));
@@ -130,12 +197,12 @@ const CalendarPage = () => {
             const graphPayload = {
                 subject: formData.subject,
                 start: {
-                    dateTime: newStartUTC,
-                    timeZone: "UTC",
+                    dateTime: new Date(formData.startTime).toISOString(),
+                    timeZone: "Europe/Athens",
                 },
                 end: {
-                    dateTime: newEndUTC,
-                    timeZone: "UTC",
+                    dateTime: new Date(formData.endTime).toISOString(),
+                    timeZone: "Europe/Athens",
                 },
                 location: {
                     displayName: selectedRoomInfo ? selectedRoomInfo.name[locale] : t('errors.unknown'),
@@ -151,44 +218,106 @@ const CalendarPage = () => {
                 "Authorization": `Bearer ${accessToken}`,
                 "Content-Type": "application/json",
             };
-            const response = await fetch(`https://graph.microsoft.com/v1.0/users/${user ? selectedUser.email : selectedUser.mail}/calendar/events`, {
-                method: "POST",
-                headers: headers,
-                body: JSON.stringify(graphPayload),
-            });
-            if (response.ok) {
-                console.log("Event created successfully");
-            } else {
-                const error = await response.json();
-                console.error("Error creating event:", error);
-            }
-            const dbPayload = {
-                subject: formData.subject,
-                start: newStartUTC,
-                end: newEndUTC,
-                organizer: user ? selectedUser.email : selectedUser.mail,
-                meetingRoomId: selectedRoom,
-            };
-            const dbResponse = await fetch(`${import.meta.env.VITE_API_URI}reservations`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify(dbPayload),
-            });
-            if (!dbResponse.ok || !response.ok) {
-                throw new Error("Failed to create reservation");
-            } else {
-                setFormData({
-                    subject: "",
-                    startTime: "",
-                    endTime: "",
-                    meetingRoomId: null,
+            if (selectedEvent) {
+                const response = await fetch(`https://graph.microsoft.com/v1.0/users/${user ? selectedUser.email : selectedUser.mail}/calendar/events/${selectedEvent.msId}`, {
+                    method: "PATCH",
+                    headers: headers,
+                    body: JSON.stringify(graphPayload),
                 });
-                toast.success(t('success.reservationCreated'));
-                fetchReservations(selectedRoom);
-                const modal = bootstrap.Modal.getInstance(document.getElementById("reservationModal"));
-                modal.hide();
+                if (response.ok) {
+                    console.log("Event updated successfully");
+                } else {
+                    const error = await response.json();
+                    console.error("Error updating event:", error);
+                }
+                const newStartUTC = new Date(`${formData.startTime}:00.000Z`).toISOString();
+                const newEndUTC = new Date(`${formData.endTime}:00.000Z`).toISOString();
+                const dbPayload = {
+                    subject: formData.subject,
+                    start: newStartUTC,
+                    end: newEndUTC,
+                    organizer: user ? selectedUser.email : selectedUser.mail,
+                    meetingRoomId: selectedRoom,
+                    isListed: true,
+                    eventId: selectedEvent.msId,
+                };
+                console.log("DB Payload:", dbPayload);
+                console.log("Original Start Time:", formData.startTime);
+                console.log("Original as UTC:", new Date(formData.startTime).toISOString());
+
+                const dbResponse = await fetch(`${import.meta.env.VITE_API_URI}reservations/${selectedEvent.id}`, {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify(dbPayload),
+                });
+                if (!dbResponse.ok || !response.ok) {
+                    throw new Error("Failed to update reservation");
+                } else {
+                    setFormData({
+                        subject: "",
+                        startTime: "",
+                        endTime: "",
+                        meetingRoomId: null,
+                    });
+                    toast.success(t('success.reservationUpdated'));
+                    fetchReservations(selectedRoom);
+                    const modal = bootstrap.Modal.getInstance(document.getElementById("reservationModal"));
+                    modal.hide();
+                }
+            } else {
+                const response = await fetch(`https://graph.microsoft.com/v1.0/users/${user ? selectedUser.email : selectedUser.mail}/calendar/events`, {
+                    method: "POST",
+                    headers: headers,
+                    body: JSON.stringify(graphPayload),
+                });
+                if (response.ok) {
+                    const createdEvent = await response.json();
+                    const newStartUTC = new Date(`${formData.startTime}:00.000Z`).toISOString();
+                    const newEndUTC = new Date(`${formData.endTime}:00.000Z`).toISOString();
+                    const dbPayload = {
+                        subject: formData.subject,
+                        start: newStartUTC,
+                        end: newEndUTC,
+                        organizer: user ? selectedUser.email : selectedUser.mail,
+                        meetingRoomId: selectedRoom,
+                        isListed: true,
+                        eventId: createdEvent.id,
+                    };
+                    console.log("DB Payload:", dbPayload);
+                    // Handle DB operation
+                    const dbResponse = await fetch(`${import.meta.env.VITE_API_URI}reservations`, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                        },
+                        body: JSON.stringify(dbPayload),
+                    });
+                    // Check DB response
+                    if (!dbResponse.ok) {
+                        const dbError = await dbResponse.json();
+                        toast.error(t('errors.failedToCreateReservationInDB'));
+                        console.error("Database Error:", dbError);
+                        return;
+                    }
+                    // Success path
+                    setFormData({
+                        subject: "",
+                        startTime: "",
+                        endTime: "",
+                        meetingRoomId: null,
+                    });
+                    toast.success(t('success.reservationCreated'));
+                    fetchReservations(selectedRoom);
+                    // Hide the modal after success
+                    const modal = bootstrap.Modal.getInstance(document.getElementById("reservationModal"));
+                    modal.hide();
+                } else {
+                    const error = await response.json();
+                    toast.error(t('errors.failedToCreateEventInCalendar'));
+                    console.error("Error creating event:", error);
+                }
             }
         } catch (e) {
             console.error("Error:", e);
@@ -197,6 +326,65 @@ const CalendarPage = () => {
             setIsSubmitting(false);
         }
     };
+    const [eventToDelete, setEventToDelete] = useState(null);
+
+    const handleDeleteClick = (event) => {
+        setEventToDelete(event);
+    };
+
+    const handleConfirmDelete = async () => {
+        if (eventToDelete) {
+
+            await deleteEvent(eventToDelete);
+            const modal = bootstrap.Modal.getInstance(document.getElementById("confirmationModal"));
+            modal.hide();
+            const reservationModal = bootstrap.Modal.getInstance(document.getElementById("reservationModal"));
+            reservationModal.hide();
+
+        }
+    };
+
+    const deleteEvent = async (event) => {
+        try {
+            const dbResponse = await fetch(`${import.meta.env.VITE_API_URI}reservations/${event.id}`, {
+                method: "PATCH",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ isListed: false }),
+            });
+            const accessToken = await getAccessToken();
+            const headers = {
+                "Authorization": `Bearer ${accessToken}`,
+            };
+            const mSresponse = await fetch(`https://graph.microsoft.com/v1.0/users/${user.email}/calendar/events/${event.msId}`, {
+                method: "DELETE",
+                headers: headers,
+            });
+            if (mSresponse.ok) {
+                console.log("Event deleted successfully");
+            } else {
+                const error = await mSresponse.json();
+                console.error("Error deleting event:", error);
+            }
+
+
+            if (!dbResponse.ok) {
+                const dbError = await dbResponse.json();
+                toast.error(t('errors.failedToDeleteReservation'));
+                console.error("Database Error:", dbError);
+                return;
+            } else {
+                toast.success(t('success.reservationDeleted'));
+                fetchReservations(selectedRoom);
+            }
+        } catch (error) {
+            toast.error(t('errors.failedToDeleteReservation'));
+            console.error("Error deleting reservation:", error);
+        }
+    };
+
+
     const fetchReservations = async (roomId) => {
         try {
             const response = await fetch(`${import.meta.env.VITE_API_URI}reservations/room/${roomId}`);
@@ -204,6 +392,7 @@ const CalendarPage = () => {
                 throw new Error("Room reservations");
             }
             const data = await response.json();
+            const listedReservations = data.data.filter(event => event.isListed === true);
             if (MsUsers.length === 0) {
                 console.log("MsUsers is empty, retrying...");
                 return;
@@ -212,7 +401,9 @@ const CalendarPage = () => {
                 const msUser = MsUsers.find((u) => u.mail === user.organizer);
                 return msUser ? msUser.displayName : t('errors.unknown');
             };
-            const calendarEvents = data.data.map((event) => ({
+            const calendarEvents = listedReservations.map((event) => ({
+                id: event._id,
+                mSid: event.eventId,
                 start: event.start,
                 end: event.end,
                 extendedProps: {
@@ -222,6 +413,7 @@ const CalendarPage = () => {
                 },
             }));
             setEvents(calendarEvents);
+            console.log("Fetched reservations:", calendarEvents);
         } catch (error) {
             console.error("Error fetching data:", error);
         }
@@ -321,6 +513,22 @@ const CalendarPage = () => {
             setSelectedRoom(defaultRoom._id);
         }
     }, [rooms, user, roomId]);
+    useEffect(() => {
+        // Select the modal element
+        const modalElement = document.getElementById("reservationModal");
+        // Add event listener to reset data when the modal is closed
+        const handleModalClose = () => {
+            resetEventData();  // Call the reset function when the modal is closed
+        };
+        if (modalElement) {
+            // Listen for the Bootstrap modal close event
+            modalElement.addEventListener("hidden.bs.modal", handleModalClose);
+            // Clean up the event listener when the component is unmounted
+            return () => {
+                modalElement.removeEventListener("hidden.bs.modal", handleModalClose);
+            };
+        }
+    }, []);
     return (
         <div>
             {user && (
@@ -384,6 +592,7 @@ const CalendarPage = () => {
                 <div className="card shadow-lg border-0 rounded-3">
                     <div className="card-body p-3">
                         <FullCalendar
+                            timeZone="Europe/Athens"
                             locales={allLocales}
                             locale={t('locale') || 'en'}
                             plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
@@ -394,10 +603,27 @@ const CalendarPage = () => {
                                 right: "dayGridMonth,timeGridWeek",
                             }}
                             events={events}
+
+                            eventClick={(info) => {
+                                if (user.name === info.event.extendedProps.organizer) {
+                                    console.log(info.event.extendedProps.organizer);
+                                    const currentDateTime = new Date();
+                                    const eventStartTime = new Date(info.event.start);
+                                    if (eventStartTime < currentDateTime) {
+                                        toast.error(t('errors.pastEventCannotBeEdited'));
+                                        return;
+                                    }
+                                    handleEventClick(info.event);
+                                }
+                            }}
                             eventContent={(arg) => {
                                 const { extendedProps, start, end } = arg.event;
-                                const startTime = new Date(start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                                const endTime = new Date(end).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                                const startTime = new Date(start).toISOString().split("T")[1].slice(0, 5);
+                                const endTime = new Date(end).toISOString().split("T")[1].slice(0, 5);
+
+                                const currentDateTime = new Date().toISOString();
+                                const eventStartTime = new Date(start).toISOString();
+                                const isPastEvent = eventStartTime < currentDateTime;
                                 return (
                                     <div
                                         style={{
@@ -405,22 +631,26 @@ const CalendarPage = () => {
                                             display: 'flex',
                                             flexDirection: 'column',
                                             maxWidth: '150px',
+                                            backgroundColor: isPastEvent ? '#f8d7da' : 'transparent',
+                                            color: isPastEvent ? '#721c24' : 'inherit',
+                                            pointerEvents: isPastEvent ? 'none' : 'auto',
+                                            opacity: isPastEvent ? 0.5 : 1,
+                                            minHeight: '30px', // Ensure a minimum height for short events
+                                            overflow: 'hidden',
                                         }}
                                     >
                                         <em>{extendedProps.organizer}</em>
-                                        {/* Time range with smaller text */}
                                         <div
                                             style={{
                                                 fontSize: '12px',
                                                 overflow: 'hidden',
                                                 textOverflow: 'ellipsis',
-                                                whiteSpace: 'nowrap', /* Prevent wrapping */
+                                                whiteSpace: 'nowrap',
                                                 maxWidth: '100%',
                                             }}
                                         >
                                             <span>{startTime} - {endTime}</span>
                                         </div>
-                                        {/* Organizer info with smaller font */}
                                         <div
                                             style={{
                                                 fontSize: '10px',
@@ -430,15 +660,14 @@ const CalendarPage = () => {
                                                 maxWidth: '100%',
                                             }}
                                         >
-                                            {/* Subject with truncation */}
                                             <h6
                                                 style={{
                                                     fontSize: '10px',
                                                     margin: '0',
                                                     overflow: 'hidden',
-                                                    whiteSpace: 'nowrap', /* Prevent wrapping */
-                                                    textOverflow: 'ellipsis', /* Truncate text */
-                                                    maxWidth: '80px', /* Ensure it doesn't overflow container */
+                                                    whiteSpace: 'nowrap',
+                                                    textOverflow: 'ellipsis',
+                                                    maxWidth: '80px',
                                                 }}
                                             >
                                                 {extendedProps.subject}
@@ -460,7 +689,7 @@ const CalendarPage = () => {
                     <div className="modal-content">
                         <form onSubmit={handleSubmit}>
                             <div className="modal-header">
-                                <h5 className="modal-title" id="reservationModalLabel">{t('newreservation')}</h5>
+                                <h5 className="modal-title" id="reservationModalLabel">{selectedEvent ? "View " : t('newreservation')}</h5>
                                 <button type="button" className="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                             </div>
                             <div className="modal-body">
@@ -490,7 +719,7 @@ const CalendarPage = () => {
                                         <input
                                             type="text"
                                             className={`form-control ${errors.subject ? "is-invalid" : ""}`}
-                                            placeholder="Enter meeting subject"
+                                            placeholder={t('enterMeetingSubject')}
                                             name="subject"
                                             value={formData.subject}
                                             onChange={handleChange}
@@ -525,12 +754,58 @@ const CalendarPage = () => {
                                 </div>
                             </div>
                             <div className="modal-footer">
-                                <button type="button" className="btn btn-secondary" data-bs-dismiss="modal">{t('close')}</button>
-                                <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
-                                    {isSubmitting ? t('saving') : t('save')}
+                                <button
+                                    type="button"
+                                    className="btn btn-secondary"
+                                    data-bs-dismiss="modal"
+                                    id="closeModalButton"
+                                >
+                                    {t('close')}
+                                </button>
+                                {selectedEvent && (
+                                    <button
+                                        type="button"
+                                        className="btn btn-danger"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#confirmationModal"
+                                        onClick={() => handleDeleteClick(selectedEvent)} // Store selected event in the state
+                                    >
+                                        {t('delete')}
+                                    </button>
+                                )}
+                                <button
+                                    type="submit"
+                                    className="btn btn-primary"
+                                    disabled={isSubmitting}
+                                >
+                                    {selectedEvent ? (isSubmitting ? t('updating') : t('update')) : (isSubmitting ? t('saving') : t('save'))}
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            </div>
+            {/* End of Modal */}
+            <div className="modal fade" id="confirmationModal" tabIndex="-1" aria-labelledby="confirmationModalLabel" aria-hidden="true">
+                <div className="modal-dialog">
+                    <div className="modal-content">
+                        <div className="modal-header">
+                            <h5 className="modal-title" id="confirmationModalLabel">{t('confirmation')}</h5>
+                            <button type="button" className="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div className="modal-body">
+                            {t('areYouSureDelete')}
+                        </div>
+                        <div className="modal-footer">
+                            <button type="button" className="btn btn-secondary" data-bs-dismiss="modal">{t('cancel')}</button>
+                            <button
+                                type="button"
+                                className="btn btn-danger"
+                                onClick={handleConfirmDelete} // Handle the confirmation of the delete
+                            >
+                                {t('yes')}
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>

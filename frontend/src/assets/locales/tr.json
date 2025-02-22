@@ -19,7 +19,18 @@
     "endTime": "Bitiş Saati",
     "save": "Rezervasyonu Kaydet",
     "saving": "Kaydediliyor...",
+    "update": "Rezervasyonu Güncelle",
+    "updating": "Güncelleniyor...",
+    "delete": "Rezervasyonu Sil",
+    "deleting": "Siliniyor...",
     "close": "Kapat",
+    "enterMeetingSubject": "Toplantı konusunu girin",
+    "enterStartTime": "Başlangıç saati girin",
+    "enterEndTime": "Bitiş saati girin",
+    "confirmation": "Silme Onayı",
+    "areYouSureDelete": "Bu rezervasyonu silmek istediğinizden emin misiniz?",
+    "cancel": "İptal",
+    "yes": "Evet",
     "errors": {
         "organizerRequired": "Organizatör gerekli.",
         "subjectRequired": "Toplantı konusu gerekli.",
@@ -33,9 +44,12 @@
         "reservationConflict": "Rezervasyon çakışması var.",
         "unknown": "Bilinmeyen",
         "organizerNotFound": "Organizatör bulunamadı.",
-        "failedToCreateReservation": "Rezervasyon oluşturulamadı."
+        "failedToCreateReservation": "Rezervasyon oluşturulamadı.",
+        "pastEventCannotBeEdited": "Geçmiş etkinlikler düzenlenemez."
     },
     "success": {
-        "reservationCreated": "Rezervasyon başarıyla oluşturuldu."
+        "reservationCreated": "Rezervasyon başarıyla oluşturuldu.",
+        "reservationUpdated": "Rezervasyon başarıyla güncellendi.",
+        "reservationDeleted": "Rezervasyon başarıyla silindi."
     }
 }

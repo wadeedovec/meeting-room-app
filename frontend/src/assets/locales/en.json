@@ -19,7 +19,18 @@
     "endTime": "End Time",
     "save": "Save Reservation",
     "saving": "Saving...",
+    "update": "Update Reservation",
+    "updating": "Updating...",
+    "delete": "Delete Reservation",
+    "deleting": "Deleting...",
     "close": "Close",
+    "enterMeetingSubject": "Enter meeting subject",
+    "enterStartTime": "Enter start time",
+    "enterEndTime": "Enter end time",
+    "confirmation": "Delete Confirmation",
+    "areYouSureDelete": "Are you sure you want to delete this reservation?",
+    "cancel": "Cancel",
+    "yes": "Yes",
     "errors": {
         "organizerRequired": "Organizer is required.",
         "subjectRequired": "Meeting subject is required.",
@@ -33,10 +44,12 @@
         "reservationConflict": "There is a reservation conflict.",
         "unknown": "Unknown",
         "organizerNotFound": "Organizer not found.",
-        "failedToCreateReservation": "Failed to create reservation."
+        "failedToCreateReservation": "Failed to create reservation.",
+        "pastEventCannotBeEdited" : "Past events cannot be edited."
     },
     "success": {
         "reservationCreated": "Reservation created successfully.",
+        "reservationUpdated": "Reservation updated successfully.",
         "reservationDeleted": "Reservation deleted successfully."
     }
 }

@@ -97,3 +97,18 @@ export const deleteAllReservations = async (req, res) => {
         res.status(500).json({ success: false, message: "Server Error" });
     }
 }
+export const unListAreservation = async (req, res) => {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(404).json({ success: false, message: "Invalid Reservation id" });
+    }
+    try {
+        await Reservation.findByIdAndUpdate(id,
+            { isListed: false },
+            { new: true });
+        res.status(200).json({ success: true, message: "Reservation unlisted successfully" });
+    } catch (error) {
+        console.error("error in deleting!! ", error);
+        res.status(500).json({ success: false, message: "Server Error" });
+    }
+}
