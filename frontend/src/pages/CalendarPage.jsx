@@ -163,23 +163,28 @@ const CalendarPage = () => {
             if (!response.ok) {
                 throw new Error("Failed to fetch reservations");
             }
+
             const data = await response.json();
             const events = data.data;
-            const hasConflict = events.some(reservation => {
+
+            const listedEvents = events.filter(reservation => reservation.isListed);
+
+            const hasConflict = listedEvents.some(reservation => {
                 const existingStart = new Date(reservation.start).toISOString();
                 const existingEnd = new Date(reservation.end).toISOString();
 
-
+                // Skip the selected event to avoid conflict with itself
                 if (selectedEvent && reservation._id === selectedEvent.id) {
                     return false;
                 }
+
                 const newStartUTCconflict = new Date(`${formData.startTime}:00.000Z`).toISOString();
                 const newEndUTCconflict = new Date(`${formData.endTime}:00.000Z`).toISOString();
 
-
+                // Return true if there is a conflict
                 return newStartUTCconflict < existingEnd && newEndUTCconflict > existingStart;
-
             });
+
             if (hasConflict) {
                 toast.error(t('errors.reservationConflict'));
                 return;
