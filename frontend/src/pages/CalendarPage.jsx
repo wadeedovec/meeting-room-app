@@ -18,7 +18,6 @@ const CalendarPage = () => {
     const [events, setEvents] = useState([]);
     const { user } = useUser();
     const [MsUsers, setMsUsers] = useState([]);
-    const [MsEvents, setMsEvents] = useState([]);
     const { loading } = useUser();
     const [room, setRoom] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -493,7 +492,6 @@ const CalendarPage = () => {
             setSelectedRoom(roomId);
         }
         fetchRooms();
-        FetchMsEvents();
     }, [user]);
     useEffect(() => {
         FetchMsUsers();
