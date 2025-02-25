@@ -45,8 +45,6 @@ const CalendarPage = () => {
     const handleEventClick = (event) => {
         const eventStartUTC = new Date(event.start).toISOString().slice(0, 16);
         const eventEndUTC = new Date(event.end).toISOString().slice(0, 16);
-
-
         const selected = {
             id: event.id,
             msId: event.extendedProps.mSid,
@@ -63,7 +61,6 @@ const CalendarPage = () => {
         });
         const modal = new bootstrap.Modal(document.getElementById("reservationModal"));
         modal.show();
-
     };
     const resetEventData = () => {
         setSelectedEvent(null);
@@ -94,7 +91,6 @@ const CalendarPage = () => {
         if (formData.endTime) {
             newEndUTC = new Date(`${formData.endTime}:00.000Z`);
         }
-
         const newErrors = {};
         if (roomId && !formData.organizer) {
             newErrors.organizer = t('errors.organizerRequired');
@@ -127,7 +123,6 @@ const CalendarPage = () => {
         if (formData.endTime) {
             newEndUTC = new Date(`${formData.endTime}:00.000Z`).toISOString();
         }
-
         if (!validateForm() || isSubmitting) {
             if (errors.organizer) {
                 toast.error(errors.organizer);
@@ -147,7 +142,6 @@ const CalendarPage = () => {
             return;
         }
         setIsSubmitting(true);
-
         if (newStartUTC < now) {
             toast.error(t('errors.pastDate'));
             setIsSubmitting(false);
@@ -159,32 +153,31 @@ const CalendarPage = () => {
             return;
         }
         try {
-            const response = await fetch(`${import.meta.env.VITE_API_URI}reservations/room/${selectedRoom}`);
+            const response = await fetch(`${import.meta.env.VITE_API_URI}reservations/room/${selectedRoom}`, {
+                method: "GET",
+                headers: {
+                    "Content-Type": "application/json",
+                    "x-api-key": import.meta.env.VITE_INTERNAL_API_KEY,
+                },
+            });
             if (!response.ok) {
                 throw new Error("Failed to fetch reservations");
             }
-
             const data = await response.json();
             const events = data.data;
-
             const listedEvents = events.filter(reservation => reservation.isListed);
-
             const hasConflict = listedEvents.some(reservation => {
                 const existingStart = new Date(reservation.start).toISOString();
                 const existingEnd = new Date(reservation.end).toISOString();
-
                 // Skip the selected event to avoid conflict with itself
                 if (selectedEvent && reservation._id === selectedEvent.id) {
                     return false;
                 }
-
                 const newStartUTCconflict = new Date(`${formData.startTime}:00.000Z`).toISOString();
                 const newEndUTCconflict = new Date(`${formData.endTime}:00.000Z`).toISOString();
-
                 // Return true if there is a conflict
                 return newStartUTCconflict < existingEnd && newEndUTCconflict > existingStart;
             });
-
             if (hasConflict) {
                 toast.error(t('errors.reservationConflict'));
                 return;
@@ -243,12 +236,11 @@ const CalendarPage = () => {
                     isListed: true,
                     eventId: selectedEvent.msId,
                 };
-
-
                 const dbResponse = await fetch(`${import.meta.env.VITE_API_URI}reservations/${selectedEvent.id}`, {
                     method: "PUT",
                     headers: {
                         "Content-Type": "application/json",
+                        "x-api-key": import.meta.env.VITE_INTERNAL_API_KEY,
                     },
                     body: JSON.stringify(dbPayload),
                 });
@@ -290,6 +282,7 @@ const CalendarPage = () => {
                         method: "POST",
                         headers: {
                             "Content-Type": "application/json",
+                            "x-api-key": import.meta.env.VITE_INTERNAL_API_KEY,
                         },
                         body: JSON.stringify(dbPayload),
                     });
@@ -326,29 +319,25 @@ const CalendarPage = () => {
         }
     };
     const [eventToDelete, setEventToDelete] = useState(null);
-
     const handleDeleteClick = (event) => {
         setEventToDelete(event);
     };
-
     const handleConfirmDelete = async () => {
         if (eventToDelete) {
-
             await deleteEvent(eventToDelete);
             const modal = bootstrap.Modal.getInstance(document.getElementById("confirmationModal"));
             modal.hide();
             const reservationModal = bootstrap.Modal.getInstance(document.getElementById("reservationModal"));
             reservationModal.hide();
-
         }
     };
-
     const deleteEvent = async (event) => {
         try {
             const dbResponse = await fetch(`${import.meta.env.VITE_API_URI}reservations/${event.id}`, {
                 method: "PATCH",
                 headers: {
                     "Content-Type": "application/json",
+                    "x-api-key": import.meta.env.VITE_INTERNAL_API_KEY,
                 },
                 body: JSON.stringify({ isListed: false }),
             });
@@ -366,8 +355,6 @@ const CalendarPage = () => {
                 const error = await mSresponse.json();
                 console.error("Error deleting event:", error);
             }
-
-
             if (!dbResponse.ok) {
                 const dbError = await dbResponse.json();
                 toast.error(t('errors.failedToDeleteReservation'));
@@ -382,11 +369,15 @@ const CalendarPage = () => {
             console.error("Error deleting reservation:", error);
         }
     };
-
-
     const fetchReservations = async (roomId) => {
         try {
-            const response = await fetch(`${import.meta.env.VITE_API_URI}reservations/room/${roomId}`);
+            const response = await fetch(`${import.meta.env.VITE_API_URI}reservations/room/${roomId}`, {
+                method: "GET",
+                headers: {
+                    "Content-Type": "application/json",
+                    "x-api-key": import.meta.env.VITE_INTERNAL_API_KEY,
+                },
+            });
             if (!response.ok) {
                 throw new Error("Room reservations");
             }
@@ -421,12 +412,11 @@ const CalendarPage = () => {
         if (accessToken && expiresAt && now < expiresAt) {
             return accessToken;
         }
-        const apiKey = import.meta.env.VITE_INTERNAL_API_KEY;
         const tokenResponse = await fetch(`${import.meta.env.VITE_API_URI}getAccessToken`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
-                "x-api-key": apiKey,
+                "x-api-key": import.meta.env.VITE_INTERNAL_API_KEY,
             },
         });
         if (!tokenResponse.ok) {
@@ -449,7 +439,13 @@ const CalendarPage = () => {
     };
     const fetchRooms = async () => {
         try {
-            const response = await fetch(`${import.meta.env.VITE_API_URI}rooms/`);
+            const response = await fetch(`${import.meta.env.VITE_API_URI}rooms/`, {
+                method: "GET",
+                headers: {
+                    "Content-Type": "application/json",
+                    "x-api-key": import.meta.env.VITE_INTERNAL_API_KEY,
+                },
+            });
             if (!response.ok) {
                 throw new Error("Failed to fetch rooms");
             }
@@ -465,7 +461,13 @@ const CalendarPage = () => {
     };
     const fetchMeetingRoom = async () => {
         try {
-            const response = await fetch(`${import.meta.env.VITE_API_URI}rooms/${roomId}`);
+            const response = await fetch(`${import.meta.env.VITE_API_URI}rooms/${roomId}`, {
+                method: "GET",
+                headers: {
+                    "Content-Type": "application/json",
+                    "x-api-key": import.meta.env.VITE_INTERNAL_API_KEY,
+                },
+            });
             if (!response.ok) {
                 window.location.replace('/login');
             }
@@ -487,10 +489,6 @@ const CalendarPage = () => {
         }
         return room.name[locale] || room.name.tr || "Unnamed Room";
     };
-
-
-
-
     useEffect(() => {
         if (!user) {
             fetchMeetingRoom();
@@ -605,7 +603,6 @@ const CalendarPage = () => {
                                 right: "dayGridMonth,timeGridWeek",
                             }}
                             events={events}
-
                             eventClick={(info) => {
                                 if (user.name === info.event.extendedProps.organizer) {
                                     const currentDateTime = new Date();
@@ -621,7 +618,6 @@ const CalendarPage = () => {
                                 const { extendedProps, start, end } = arg.event;
                                 const startTime = new Date(start).toISOString().split("T")[1].slice(0, 5);
                                 const endTime = new Date(end).toISOString().split("T")[1].slice(0, 5);
-
                                 const currentDateTime = new Date().toISOString();
                                 const eventStartTime = new Date(start).toISOString();
                                 const isPastEvent = eventStartTime < currentDateTime;

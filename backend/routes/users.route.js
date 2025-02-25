@@ -1,10 +1,9 @@
 import express from "express";
 import { verifyApiKey } from "../middlewares/authMiddleware.js";
-import { getUsers, checkUser, createUser, updateUser, deleteUser } from "../controllers/user.controller.js";
+import { checkUser, createUser, updateUser, deleteUser } from "../controllers/user.controller.js";
 const router = express.Router();
-//router.get("/", getUsers);
-router.post("/check-user", checkUser);
-router.post("/add-user", createUser);
+router.post("/check-user", verifyApiKey, checkUser);
+router.post("/add-user", verifyApiKey, createUser);
 router.put("/:id", verifyApiKey, updateUser);
 router.delete("/:id", verifyApiKey, deleteUser);
 export default router;
