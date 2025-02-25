@@ -10,14 +10,6 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 app.use(express.json());
 app.use(cors());
-app.get('/api/', async (req, res) => {
-    const dbConnected = await connectDB();  // Check if the DB is connected
-    if (dbConnected) {
-        res.status(200).send('API is running... Database connected!');
-    } else {
-        res.status(500).send('API is running... but Database connection failed!');
-    }
-});
 app.post('/api/getAccessToken', async (req, res) => {
     const apiKey = req.headers['x-api-key'];
 
