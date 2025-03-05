@@ -22,6 +22,15 @@ const reservationSchema = new mongoose.Schema(
             type: Date,
             required: true,
         },
+        isListed: {
+            type: Boolean,
+            required: true,
+            default: true,
+        },
+        eventId: {
+            type: String,
+            required: true,
+        },
     },
     {
         timestamps: true,

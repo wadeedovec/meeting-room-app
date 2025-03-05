@@ -30,7 +30,10 @@ const Login = () => {
 
             const checkUserResponse = await fetch(`${import.meta.env.VITE_API_URI}users/check-user`, {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: {
+                    "Content-Type": "application/json",
+                    "x-api-key": import.meta.env.VITE_INTERNAL_API_KEY,
+                },
                 body: JSON.stringify({ email: account.username }),
             });
 
@@ -39,7 +42,10 @@ const Login = () => {
             if (!checkUserData.userExists || checkUserData.userExists === false) {
                 const addUserResponse = await fetch(`${import.meta.env.VITE_API_URI}users/add-user`, {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    headers: {
+                        "Content-Type": "application/json",
+                        "x-api-key": import.meta.env.VITE_INTERNAL_API_KEY,
+                    },
                     body: JSON.stringify(userData),
                 });
 

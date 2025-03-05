@@ -1,9 +1,10 @@
 import express from "express";
+import { verifyApiKey } from "../middlewares/authMiddleware.js";
 import { getRooms, getRoomById, createRoom, updateRoom, deleteRoom } from "../controllers/room.controller.js";
 const router = express.Router();
-router.get("/", getRooms);
-router.get("/:id", getRoomById);
-router.post("/", createRoom);
-router.put("/:id", updateRoom);
-router.delete("/:id", deleteRoom);
+router.get("/", verifyApiKey, getRooms);
+router.get("/:id", verifyApiKey, getRoomById);
+router.post("/", verifyApiKey, createRoom);
+router.put("/:id", verifyApiKey, updateRoom);
+router.delete("/:id", verifyApiKey, deleteRoom);
 export default router;
