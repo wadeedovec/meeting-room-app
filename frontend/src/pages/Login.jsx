@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useMsal } from "@azure/msal-react";
 import { loginRequest } from "../authConfig";
 import { Navigate } from "react-router-dom";
@@ -6,17 +6,28 @@ import { useUser } from "../../context/UserContext";
 import { useTranslation } from "react-i18next";
 import { FaGlobe } from "react-icons/fa";
 import "bootstrap/dist/css/bootstrap.min.css";
-
+import * as microsoftTeams from "@microsoft/teams-js";
 const Login = () => {
     const { instance } = useMsal();
     const { login } = useUser();
     const { t, i18n } = useTranslation();
     const [error, setError] = useState("");
+    const [isTeamsEnvironment, setIsTeamsEnvironment] = useState(false);
+    useEffect(() => {
+        microsoftTeams.app.initialize();
+        microsoftTeams.app.getContext((context) => {
+            if (context) {
+                setIsTeamsEnvironment(true);
+                // Optionally perform SSO or any other Teams-specific logic here
+            } else {
+                setIsTeamsEnvironment(false);
+            }
+        });
+    }, []);
 
     if (localStorage.getItem("user")) {
         return <Navigate replace to="/" />;
     }
-
     const handleLogin = async () => {
         try {
             const response = await instance.loginPopup(loginRequest);
@@ -27,7 +38,6 @@ const Login = () => {
                 aad_id: account.localAccountId,
                 role: "user"
             };
-
             const checkUserResponse = await fetch(`${import.meta.env.VITE_API_URI}users/check-user`, {
                 method: "POST",
                 headers: {
@@ -36,9 +46,7 @@ const Login = () => {
                 },
                 body: JSON.stringify({ email: account.username }),
             });
-
             const checkUserData = await checkUserResponse.json();
-
             if (!checkUserData.userExists || checkUserData.userExists === false) {
                 const addUserResponse = await fetch(`${import.meta.env.VITE_API_URI}users/add-user`, {
                     method: "POST",
@@ -48,7 +56,6 @@ const Login = () => {
                     },
                     body: JSON.stringify(userData),
                 });
-
                 const addedUser = await addUserResponse.json();
                 login(addedUser.user);
             } else {
@@ -59,17 +66,15 @@ const Login = () => {
             setError(t("login_error"));
         }
     };
-
     const handleLanguageChange = (lang) => {
         i18n.changeLanguage(lang);
     };
-
+    console.log(isTeamsEnvironment);
     return (
         <div className="vh-100 d-flex justify-content-center align-items-center login-bg">
             <div className="glass-card p-5 shadow-lg text-center">
                 <h2 className="fw-bold">{t("welcome")}</h2>
                 <p className="text-light">{t("login_subtext")}</p>
-
                 {/* Language Selector */}
                 <div className="dropdown mb-3">
                     <button className="btn btn-outline-light dropdown-toggle" type="button" id="languageDropdown" data-bs-toggle="dropdown" aria-expanded="false">
@@ -80,17 +85,14 @@ const Login = () => {
                         <li><button className="dropdown-item" onClick={() => handleLanguageChange("tr")}>🇹🇷 Türkçe</button></li>
                     </ul>
                 </div>
-
-                {/* Login Button */}
+                {isTeamsEnvironment ? "teams" : "web"}
                 <button className="btn btn-primary btn-lg w-100 rounded-pill" onClick={handleLogin}>
                     {t("login_button")}
                 </button>
-
                 {/* Error Message */}
                 {error && <div className="text-danger mt-3 fw-bold">{error}</div>}
             </div>
         </div>
     );
 };
-
 export default Login;
