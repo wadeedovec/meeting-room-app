@@ -258,6 +258,13 @@ const CalendarPage = () => {
                     isListed: true,
                     eventId: selectedEvent.msId,
                 };
+                if (formData.attendees && formData.attendees.length > 0) {
+                    dbPayload.attendees = formData.attendees.map(email => ({
+                        emailAddress: {
+                            address: email
+                        }
+                    }));
+                }
                 const dbResponse = await fetch(`${import.meta.env.VITE_API_URI}reservations/${selectedEvent.id}`, {
                     method: "PUT",
                     headers: {
@@ -266,7 +273,7 @@ const CalendarPage = () => {
                     },
                     body: JSON.stringify(dbPayload),
                 });
-                if (!dbResponse.ok || !response.ok) {
+                if (!dbResponse.ok) {
                     throw new Error("Failed to update reservation");
                 } else {
                     setFormData({
@@ -298,9 +305,14 @@ const CalendarPage = () => {
                         meetingRoomId: selectedRoom,
                         isListed: true,
                         eventId: createdEvent.id,
-                        attendees: formData.attendees,
                     };
-                    // Handle DB operation
+                    if (formData.attendees && formData.attendees.length > 0) {
+                        dbPayload.attendees = formData.attendees.map(email => ({
+                            emailAddress: {
+                                address: email
+                            }
+                        }));
+                    }
                     const dbResponse = await fetch(`${import.meta.env.VITE_API_URI}reservations`, {
                         method: "POST",
                         headers: {
@@ -309,14 +321,12 @@ const CalendarPage = () => {
                         },
                         body: JSON.stringify(dbPayload),
                     });
-                    // Check DB response
                     if (!dbResponse.ok) {
                         const dbError = await dbResponse.json();
                         toast.error(t('errors.failedToCreateReservationInDB'));
                         console.error("Database Error:", dbError);
                         return;
                     }
-                    // Success path
                     setFormData({
                         subject: "",
                         startTime: "",
@@ -325,7 +335,6 @@ const CalendarPage = () => {
                     });
                     toast.success(t('success.reservationCreated'));
                     fetchReservations(selectedRoom);
-                    // Hide the modal after success
                     const modal = bootstrap.Modal.getInstance(document.getElementById("reservationModal"));
                     modal.hide();
                 } else {
