@@ -25,6 +25,7 @@ const CalendarPage = () => {
     let expiresAt = null;
     const options = MsUsers.map(user => ({
         value: user.id,
+        email: user.mail,
         label: user.displayName
     }));
     const getColorCircle = (color) => {
@@ -66,6 +67,7 @@ const CalendarPage = () => {
         setSelectedEvent(null);
         setFormData({
             organizer: "",
+            attendees: [],
             subject: "",
             startTime: "",
             endTime: "",
@@ -73,6 +75,7 @@ const CalendarPage = () => {
     };
     const [formData, setFormData] = useState({
         organizer: "",
+        attendees: [],
         subject: selectedEvent?.subject || "",
         startTime: selectedEvent?.startTime || "",
         endTime: selectedEvent?.endTime || "",
@@ -81,6 +84,17 @@ const CalendarPage = () => {
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
         setErrors((prev) => ({ ...prev, [e.target.name]: "" }));
+    };
+    const handleAttendeesChange = (selectedOptions) => {
+        const values = selectedOptions ? selectedOptions.map(option => option.email) : [];
+        setFormData(prevFormData => ({
+            ...prevFormData,
+            attendees: values
+        }));
+        setErrors(prevErrors => ({
+            ...prevErrors,
+            attendees: ""
+        }));
     };
     const validateForm = () => {
         let newStartUTC = null;
@@ -152,6 +166,7 @@ const CalendarPage = () => {
             setIsSubmitting(false);
             return;
         }
+        console.log(formData.attendees);
         try {
             const response = await fetch(`${import.meta.env.VITE_API_URI}reservations/room/${selectedRoom}`, {
                 method: "GET",
@@ -209,6 +224,13 @@ const CalendarPage = () => {
                     },
                 },
             };
+            if (formData.attendees && formData.attendees.length > 0) {
+                graphPayload.attendees = formData.attendees.map(email => ({
+                    emailAddress: {
+                        address: email
+                    }
+                }));
+            }
             const headers = {
                 "Authorization": `Bearer ${accessToken}`,
                 "Content-Type": "application/json",
@@ -276,6 +298,7 @@ const CalendarPage = () => {
                         meetingRoomId: selectedRoom,
                         isListed: true,
                         eventId: createdEvent.id,
+                        attendees: formData.attendees,
                     };
                     // Handle DB operation
                     const dbResponse = await fetch(`${import.meta.env.VITE_API_URI}reservations`, {
@@ -632,7 +655,7 @@ const CalendarPage = () => {
                                             color: isPastEvent ? '#721c24' : 'inherit',
                                             pointerEvents: isPastEvent ? 'none' : 'auto',
                                             opacity: isPastEvent ? 0.5 : 1,
-                                            minHeight: '30px', // Ensure a minimum height for short events
+                                            minHeight: '30px',
                                             overflow: 'hidden',
                                         }}
                                     >
@@ -681,7 +704,7 @@ const CalendarPage = () => {
                 </div>
             </div>
             {/* Modal */}
-            <div className="modal fade" id="reservationModal" tabIndex="-1" aria-labelledby="reservationModalLabel" aria-hidden="true" >
+            <div className="modal fade" id="reservationModal" data-bs-backdrop="static" data-bs-keyboard="false" tabIndex="-1" aria-labelledby="reservationModalLabel" aria-hidden="true" >
                 <div className="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
                     <div className="modal-content">
                         <form onSubmit={handleSubmit}>
@@ -723,6 +746,8 @@ const CalendarPage = () => {
                                         />
                                         {errors.subject && <div className="invalid-feedback">{errors.subject}</div>}
                                     </div>
+
+
                                     {/* Start Time */}
                                     <div className="col-md-6">
                                         <label className="form-label">{t('startTime')} <span className="text-danger">*</span></label>
@@ -748,7 +773,27 @@ const CalendarPage = () => {
                                         {errors.endTime && <div className="invalid-feedback">{errors.endTime}</div>}
                                         {errors.time && <div className="invalid-feedback">{errors.time}</div>}
                                     </div>
+                                    <div className="col-12">
+                                        <label className="form-label">{t('attendees')}</label>
+                                        <Select
+                                            name="attendees"
+                                            value={options.filter(option => formData.attendees?.includes(option.email))}
+                                            onChange={handleAttendeesChange}
+                                            options={options}
+                                            placeholder={t('searchAttendees')}
+                                            isMulti
+                                            isSearchable
+                                            menuPortalTarget={document.body}
+                                            styles={{ menuPortal: base => ({ ...base, zIndex: 9999 }) }}
+                                            closeMenuOnSelect={false}
+                                        />
+                                        {errors.attendees && <div className="invalid-feedback">{errors.attendees}</div>}
+                                        <small className="form-text text-muted">
+                                            {t('selectMultiple')}
+                                        </small>
+                                    </div>
                                 </div>
+
                             </div>
                             <div className="modal-footer">
                                 <button

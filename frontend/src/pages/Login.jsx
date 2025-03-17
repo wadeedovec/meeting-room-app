@@ -6,24 +6,11 @@ import { useUser } from "../../context/UserContext";
 import { useTranslation } from "react-i18next";
 import { FaGlobe } from "react-icons/fa";
 import "bootstrap/dist/css/bootstrap.min.css";
-import * as microsoftTeams from "@microsoft/teams-js";
 const Login = () => {
     const { instance } = useMsal();
     const { login } = useUser();
     const { t, i18n } = useTranslation();
     const [error, setError] = useState("");
-    const [isTeamsEnvironment, setIsTeamsEnvironment] = useState(false);
-    useEffect(() => {
-        microsoftTeams.app.initialize();
-        microsoftTeams.app.getContext((context) => {
-            if (context) {
-                setIsTeamsEnvironment(true);
-                // Optionally perform SSO or any other Teams-specific logic here
-            } else {
-                setIsTeamsEnvironment(false);
-            }
-        });
-    }, []);
 
     if (localStorage.getItem("user")) {
         return <Navigate replace to="/" />;
@@ -69,7 +56,6 @@ const Login = () => {
     const handleLanguageChange = (lang) => {
         i18n.changeLanguage(lang);
     };
-    console.log(isTeamsEnvironment);
     return (
         <div className="vh-100 d-flex justify-content-center align-items-center login-bg">
             <div className="glass-card p-5 shadow-lg text-center">
@@ -85,7 +71,6 @@ const Login = () => {
                         <li><button className="dropdown-item" onClick={() => handleLanguageChange("tr")}>🇹🇷 Türkçe</button></li>
                     </ul>
                 </div>
-                {isTeamsEnvironment ? "teams" : "web"}
                 <button className="btn btn-primary btn-lg w-100 rounded-pill" onClick={handleLogin}>
                     {t("login_button")}
                 </button>

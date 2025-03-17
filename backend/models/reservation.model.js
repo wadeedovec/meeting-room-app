@@ -31,6 +31,9 @@ const reservationSchema = new mongoose.Schema(
             type: String,
             required: true,
         },
+        attendees: {
+            type: Array,
+        }
     },
     {
         timestamps: true,
