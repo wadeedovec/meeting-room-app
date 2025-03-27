@@ -1,57 +1,41 @@
-import * as microsoftTeams from "@microsoft/teams-js";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState } from 'react';
+import * as microsoftTeams from '@microsoft/teams-js';
 
-function TeamsLogin() {
-    const [user, setUser] = useState(null);
+function TeamsTabWithSSO() {
+    const [data, setData] = useState(null);
     const [error, setError] = useState(null);
 
     useEffect(() => {
-        microsoftTeams.app.initialize().then(() => {
-            getClientSideToken()
-                .then(clientSideToken => {
-                    console.log("Client-side token:", clientSideToken);
-                    // Here, getServerSideToken would ideally be a call to your backend
-                    return getServerSideToken(clientSideToken);
-                })
-                .then(profile => {
-                    console.log("Profile received:", profile);
-                    setUser(profile);
+        microsoftTeams.app.initialize();
+
+        // Using the Promise-based approach to get the auth token
+        microsoftTeams.authentication.getAuthToken().then(token => {
+            console.log("Token received from Teams:", token);
+            fetch(`/token?token=${token}`)
+                .then(response => response.json())
+                .then(data => {
+                    console.log("Data received from backend:", data);
+                    setData(data);
                 })
                 .catch(err => {
-                    console.error("Authentication error:", err);
-                    setError(err.toString());
+                    console.error("Error fetching data from backend:", err);
+                    setError("Error fetching data: " + err.message);
                 });
-        }).catch(err => {
-            console.error("Failed to initialize Microsoft Teams SDK:", err);
-            setError("Failed to initialize Microsoft Teams SDK: " + err);
+        }).catch(error => {
+            console.error("Error getting token from Teams:", error);
+            setError("Error getting token: " + error);
         });
     }, []);
 
-    function getClientSideToken() {
-        return microsoftTeams.authentication.getAuthToken().then(token => {
-            console.log("Received token:", token);
-            return token;
-        }).catch(error => {
-            throw new Error("Error getting token: " + error);
-        });
-    }
-
-
-    function getServerSideToken(clientSideToken) {
-        // Placeholder function: Implement according to your backend API
-        return new Promise((resolve, reject) => {
-            // Simulate API call
-            setTimeout(() => resolve({ name: "John Doe" }), 1000);
-        });
-    }
-
     if (error) return <p>Error: {error}</p>;
+    if (!data) return <p>Loading data...</p>;
+
     return (
         <div>
-            <h1>Teams Login</h1>
-            <p>Teams user: {user ? user.name : "Loading..."}</p>
+            <h1>Teams Tab with SSO</h1>
+            <pre>{JSON.stringify(data, null, 2)}</pre>
         </div>
     );
 }
 
-export default TeamsLogin;
+export default TeamsTabWithSSO;
