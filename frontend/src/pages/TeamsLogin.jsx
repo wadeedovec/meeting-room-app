@@ -12,7 +12,7 @@ function TeamsLogin() {
             app.authentication.getAuthToken({
                 successCallback: async (access_token) => {
                     try {
-                        const res = await fetch('http://localhost:5000/api/getAccessToken', {
+                        const res = await fetch(`${import.meta.env.VITE_API_URI}getAccessToken`, {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
