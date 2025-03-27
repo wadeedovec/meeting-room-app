@@ -4,6 +4,7 @@ import CalendarPage from "../pages/CalendarPage";
 import EventsPage from "../pages/getEvents";  // Change to PascalCase
 import AuthRedirectHandler from "../pages/AuthRedirectHandler";
 
+import TeamsLogin from "../pages/TeamsLogin";
 import Login from "../pages/Login";
 import ProtectedRoutes from "./ProtectedRoutes";
 import Layout from "../components/Layout";
@@ -12,6 +13,7 @@ const AppRoutes = () => {
     return (
         <Router>
             <Routes>
+                <Route path="/teamslogin" element={<TeamsLogin />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/events" element={<EventsPage />} />
                 <Route path="/redirect" element={<AuthRedirectHandler />} /> {/* Handle the redirect */}
