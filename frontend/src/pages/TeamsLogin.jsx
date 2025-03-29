@@ -10,7 +10,7 @@ function TeamsTabWithSSO() {
             try {
                 await microsoftTeams.app.initialize(); // required before any Teams API
                 const token = await microsoftTeams.authentication.getAuthToken({
-                    resources: ["api://booking.dovecgroup.com/" + import.meta.env.VITE_CLIENT_ID + "/access_as_user"] // your exposed API scope
+                    resources: ["api://booking.dovecgroup.com/" + import.meta.env.VITE_CLIENT_ID] // your exposed API scope
                 });
 
                 console.log("Token received from Teams:", token);
