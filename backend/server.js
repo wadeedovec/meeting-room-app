@@ -10,7 +10,7 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 app.use(express.json());
 app.use(cors());
-app.get('/token', (req, res) => {
+app.get('/api/token', (req, res) => {
     const tToken = req.query.token;
     if (!tToken) {
         res.status(500).send("No Token");
