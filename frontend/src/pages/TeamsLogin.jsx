@@ -8,7 +8,7 @@ function TeamsTabWithSSO() {
     useEffect(() => {
         async function init() {
             try {
-                await microsoftTeams.app.initialize(); // Ensure Teams SDK is initialized
+                await microsoftTeams.app.initialize();
                 const token = await microsoftTeams.authentication.getAuthToken({
                     resources: ["api://booking.dovecgroup.com/" + import.meta.env.VITE_CLIENT_ID]
                 });
@@ -17,7 +17,7 @@ function TeamsTabWithSSO() {
 
                 const response = await fetch(`${import.meta.env.VITE_API_URI}token?token=${token}`);
                 if (!response.ok) {
-                    throw new Error('Network response was not ok');
+                    throw new Error(`HTTP status ${response.status}: ${await response.text()}`);
                 }
                 const data = await response.json();
                 setData(data);
