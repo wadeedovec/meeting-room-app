@@ -22,7 +22,7 @@ app.get('/api/token', (req, res) => {
         console.log("\x1b[32m", "-----------------------------------------");
     }
     var oboPromise = new Promise((resolve, reject) => {
-        const url = "https://login.microsoftonline.com/common/oauth2/v2.0/token";
+        const url = "https://login.microsoftonline.com/"+process.env.TENANT_ID+"/oauth2/v2.0/token";
         const params = {
             "grant_type": "urn:ietf:params:oauth:grant-type:jwt-bearer",
             "client_id": process.env.CLIENT_ID,
