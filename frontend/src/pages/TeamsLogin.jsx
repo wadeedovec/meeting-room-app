@@ -15,7 +15,7 @@ function TeamsTabWithSSO() {
 
                 console.log("Token received from Teams:", token);
 
-                const res = await fetch(`/token?token=${token}`);
+                const res = await fetch(`${import.meta.env.VITE_API_URI}token?token=${token}`);
                 const data = await res.json();
                 setData(data);
             } catch (err) {
