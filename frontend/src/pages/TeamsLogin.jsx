@@ -13,14 +13,15 @@ function TeamsTabWithSSO() {
                     resources: ["api://booking.dovecgroup.com/" + import.meta.env.VITE_CLIENT_ID] // your exposed API scope
                 });
 
-                console.log("Token received from Teams:", token);
+                // Display the token in the UI for debugging (if needed)
+                // Remember to remove or protect sensitive information in production!
+                setData({ token });
 
                 const res = await fetch(`${import.meta.env.VITE_API_URI}token?token=${token}`);
-                const data = await res.json();
-                setData(data);
+                const jsonData = await res.json();
+                setData(jsonData); // Update the data state with the fetched data
             } catch (err) {
-                console.error("Error getting Teams auth token:", err);
-                setError("Could not get SSO token: " + err.message);
+                setError(`Could not get SSO token: ${err.message}`);
             }
         }
 
@@ -33,6 +34,7 @@ function TeamsTabWithSSO() {
     return (
         <div>
             <h1>Teams Tab with SSO</h1>
+            {/* Output data in a formatted way for debugging */}
             <pre>{JSON.stringify(data, null, 2)}</pre>
         </div>
     );
