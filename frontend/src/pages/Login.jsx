@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useMsal } from "@azure/msal-react";
 import { loginRequest } from "../authConfig";
 import { Navigate } from "react-router-dom";
@@ -6,15 +6,31 @@ import { useUser } from "../../context/UserContext";
 import { useTranslation } from "react-i18next";
 import { FaGlobe } from "react-icons/fa";
 import "bootstrap/dist/css/bootstrap.min.css";
+import * as microsoftTeams from '@microsoft/teams-js';
+
 const Login = () => {
     const { instance } = useMsal();
-    const { login } = useUser();
+    const { user, login } = useUser();
     const { t, i18n } = useTranslation();
     const [error, setError] = useState("");
+    const [redirectPath, setRedirectPath] = useState("");
 
-    if (localStorage.getItem("user")) {
+    useEffect(() => {
+        microsoftTeams.app.initialize();
+        microsoftTeams.app.getContext((context) => {
+            if (context) {
+                setRedirectPath("/teamslogin");  // Set path for Teams environment
+            }
+        });
+    }, []);
+
+    if (user || localStorage.getItem("user")) {
         return <Navigate replace to="/" />;
     }
+    if (redirectPath) {
+        return <Navigate replace to={redirectPath} />;
+    }
+
     const handleLogin = async () => {
         try {
             const response = await instance.loginPopup(loginRequest);
@@ -25,6 +41,8 @@ const Login = () => {
                 aad_id: account.localAccountId,
                 role: "user"
             };
+
+            // Check if the user exists
             const checkUserResponse = await fetch(`${import.meta.env.VITE_API_URI}users/check-user`, {
                 method: "POST",
                 headers: {
@@ -34,7 +52,9 @@ const Login = () => {
                 body: JSON.stringify({ email: account.username }),
             });
             const checkUserData = await checkUserResponse.json();
-            if (!checkUserData.userExists || checkUserData.userExists === false) {
+
+            // Add or login user
+            if (!checkUserData.userExists) {
                 const addUserResponse = await fetch(`${import.meta.env.VITE_API_URI}users/add-user`, {
                     method: "POST",
                     headers: {
@@ -53,9 +73,11 @@ const Login = () => {
             setError(t("login_error"));
         }
     };
+
     const handleLanguageChange = (lang) => {
         i18n.changeLanguage(lang);
     };
+
     return (
         <div className="vh-100 d-flex justify-content-center align-items-center login-bg">
             <div className="glass-card p-5 shadow-lg text-center">
@@ -80,4 +102,5 @@ const Login = () => {
         </div>
     );
 };
+
 export default Login;
