@@ -13,22 +13,28 @@ const Login = () => {
     const { user, login } = useUser();
     const { t, i18n } = useTranslation();
     const [error, setError] = useState("");
-    const [redirectPath, setRedirectPath] = useState("");
+    const [redirectPath, setRedirectPath] = useState(null);
 
     useEffect(() => {
-        microsoftTeams.app.initialize();
-        microsoftTeams.app.getContext((context) => {
-            if (context) {
-                setRedirectPath("/teamslogin");  // Set path for Teams environment
-            }
+        let mounted = true;
+        microsoftTeams.initialize(() => {
+            microsoftTeams.app.getContext((context) => {
+                if (mounted) {
+                    setRedirectPath(context ? "/teamslogin" : "/login");
+                }
+            });
         });
+        return () => { mounted = false; };
     }, []);
 
+    // Redirect based on the path determined by Teams context
+    if (redirectPath) {
+        return <Navigate to={redirectPath} replace />;
+    }
+
+    // Check if user is already logged in
     if (user || localStorage.getItem("user")) {
         return <Navigate replace to="/" />;
-    }
-    if (redirectPath) {
-        return <Navigate replace to={redirectPath} />;
     }
 
     const handleLogin = async () => {
@@ -41,8 +47,6 @@ const Login = () => {
                 aad_id: account.localAccountId,
                 role: "user"
             };
-
-            // Check if the user exists
             const checkUserResponse = await fetch(`${import.meta.env.VITE_API_URI}users/check-user`, {
                 method: "POST",
                 headers: {
@@ -52,8 +56,6 @@ const Login = () => {
                 body: JSON.stringify({ email: account.username }),
             });
             const checkUserData = await checkUserResponse.json();
-
-            // Add or login user
             if (!checkUserData.userExists) {
                 const addUserResponse = await fetch(`${import.meta.env.VITE_API_URI}users/add-user`, {
                     method: "POST",
@@ -83,7 +85,6 @@ const Login = () => {
             <div className="glass-card p-5 shadow-lg text-center">
                 <h2 className="fw-bold">{t("welcome")}</h2>
                 <p className="text-light">{t("login_subtext")}</p>
-                {/* Language Selector */}
                 <div className="dropdown mb-3">
                     <button className="btn btn-outline-light dropdown-toggle" type="button" id="languageDropdown" data-bs-toggle="dropdown" aria-expanded="false">
                         <FaGlobe className="me-2" /> {t("language")}
@@ -96,7 +97,6 @@ const Login = () => {
                 <button className="btn btn-primary btn-lg w-100 rounded-pill" onClick={handleLogin}>
                     {t("login_button")}
                 </button>
-                {/* Error Message */}
                 {error && <div className="text-danger mt-3 fw-bold">{error}</div>}
             </div>
         </div>
