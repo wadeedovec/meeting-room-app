@@ -86,7 +86,7 @@ function toQueryString(queryParams) {
     }
     return encodedQueryParams.join("&");
 }
-app.get('/login', (req, res) => {
+/* app.get('/login', (req, res) => {
     const state = generateRandomString(16); // Shorter length for state
     const codeVerifier = generateRandomString(256); // Recommended length for PKCE Verifier
     const codeChallenge = generateCodeChallenge(codeVerifier);
@@ -134,7 +134,7 @@ app.get('/oauth/callback', async (req, res) => {
         console.error('Error in token exchange:', error);
         res.status(500).json({ error: 'Internal server error during token exchange' });
     }
-});
+}); */
 
 app.post('/api/getAccessToken', async (req, res) => {
     const apiKey = req.headers['x-api-key'];
