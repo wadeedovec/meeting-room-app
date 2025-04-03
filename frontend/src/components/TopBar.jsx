@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { RiLogoutBoxLine } from "react-icons/ri";
 import { FaGlobe } from "react-icons/fa"; // Globe icon for better UI
 import Logo from '../assets/images/dovec beyaz.png';
