@@ -1,12 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import * as microsoftTeams from '@microsoft/teams-js';
 import { useUser } from "../../context/UserContext";
+import { Navigate } from "react-router-dom";
 
 function TeamsTabWithSSO() {
     const [data, setData] = useState(null);
     const [error, setError] = useState(null);
     const { login } = useUser();
 
+    if (localStorage.getItem("user")) {
+        return <Navigate replace to="/" />;
+    }
     useEffect(() => {
         async function init() {
             try {
