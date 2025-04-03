@@ -13,6 +13,7 @@ const Login = () => {
     const { login } = useUser();
     const { t, i18n } = useTranslation();
     const [error, setError] = useState("");
+    const [teamsError, setTeamsError] = useState("");
     const [userLoggedIn, setUserLoggedIn] = useState(localStorage.getItem("user") ? true : false);
 
     useEffect(() => {
@@ -63,7 +64,7 @@ const Login = () => {
                     setUserLoggedIn(true);
                 } catch (err) {
                     console.error("Error getting Teams auth token:", err);
-                    setError("Could not get SSO token: " + err.message);
+                    setTeamsError("Could not get SSO token: " + err.message);
                 }
             }
         }
