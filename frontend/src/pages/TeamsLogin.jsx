@@ -66,9 +66,9 @@ function TeamsTabWithSSO() {
         init();
     }, [userLoggedIn]);  // Dependency to ensure useEffect runs again if userLoggedIn changes
 
-    if (!userLoggedIn) {
+    /* if (!userLoggedIn) {
         return <p>Loading...</p>;  // or another placeholder
-    }
+    } */
 
     if (error) return <p>Error: {error}</p>;
     if (!data) return <p>Loading data...</p>;
