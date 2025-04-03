@@ -1,24 +1,15 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { RiLogoutBoxLine } from "react-icons/ri";
 import { FaGlobe } from "react-icons/fa"; // Globe icon for better UI
 import Logo from '../assets/images/dovec beyaz.png';
 import { useUser } from "../../context/UserContext";
 import { useTranslation } from 'react-i18next';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import * as microsoftTeams from '@microsoft/teams-js';
 
 const Topbar = () => {
-    const [isTeams, setIsTeams] = useState(false); // State to track if inside Teams
     const { user, logout } = useUser();
     const { t, i18n } = useTranslation();
-    useEffect(() => {
-        microsoftTeams.app.initialize();
-        microsoftTeams.app.getContext((context) => {
-            if (context) {
-                setIsTeams(true); // Set isTeams to true if running inside Teams
-            }
-        });
-    }, []);
+
     const handleLogout = () => {
         logout();
     };
@@ -60,7 +51,7 @@ const Topbar = () => {
                     </div>
 
                     {/* Logout Button */}
-                    {user && !isTeams && (
+                    {user && (
                         <button className="btn btn-light d-flex align-items-center" onClick={handleLogout}>
                             <RiLogoutBoxLine className="me-2" /> {t('logout')}
                         </button>
